@@ -1,0 +1,44 @@
+name: Daily Price Monitor
+
+on:
+  schedule:
+    # 每天 UTC 0点 (北京时间 08:00)
+    - cron: "0 0 * * *"
+  workflow_dispatch: # 允许手动触发 (按钮)
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 必须：授予写入权限以推回数据
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium # 安装浏览器内核
+
+      - name: Run Monitor Script
+        env:
+          HEADLESS_MODE: "true" # 确保脚本以 Headless 运行
+        run: python monitor.py
+
+      - name: Check for changes
+        run: git status
+
+      - name: Commit and Push Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-update prices & products [skip ci]"
+          file_pattern: "prices.csv products.csv"
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "actions@github.com"
