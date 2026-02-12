@@ -2,8 +2,8 @@ name: Daily Price Monitor
 
 on:
   schedule:
-    # 每天 UTC 21:15 (北京时间 05:15)
-    - cron: "15 21 * * *"
+    # 每天 UTC 05:15 (法国冬令时 06:15)
+    - cron: "15 5 * * *"
   workflow_dispatch: # 允许手动触发 (按钮)
 
 jobs:
