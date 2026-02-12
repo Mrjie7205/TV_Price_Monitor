@@ -301,9 +301,60 @@ async def get_amazon_price(page):
         except: pass
     return None
 
+async def get_currys_price(page):
+    """抓取 Currys.co.uk 价格"""
+    # 策略 1: data-product='price' (Currys 经典属性)
+    try:
+        el = page.locator("strong[data-product='price']").first
+        if await el.count() > 0:
+            text = await el.text_content()
+            result = clean_price(text)
+            if result: return result
+    except: pass
+    
+    # 策略 2: [data-test='current-price'] 或类似 data-test 属性
+    for sel in ["[data-test='current-price']", "[data-test='product-price']"]:
+        try:
+            el = page.locator(sel).first
+            if await el.count() > 0:
+                text = await el.text_content()
+                result = clean_price(text)
+                if result: return result
+        except: pass
+    
+    # 策略 3: 通用价格 class
+    for sel in [".prices_kgK", ".price", ".product-price", "span[class*='price']", "div[class*='price']"]:
+        try:
+            els = await page.locator(sel).all()
+            for el in els:
+                text = await el.text_content()
+                if text and "£" in text:
+                    result = clean_price(text)
+                    if result: return result
+        except: pass
+    
+    # 策略 4: 从 JSON-LD Schema 中提取
+    try:
+        scripts = await page.locator("script[type='application/ld+json']").all()
+        for script in scripts:
+            import json
+            content = await script.text_content()
+            if content and '"price"' in content:
+                data = json.loads(content)
+                if isinstance(data, dict):
+                    offers = data.get('offers', data.get('Offers', {}))
+                    if isinstance(offers, list): offers = offers[0] if offers else {}
+                    price_val = offers.get('price')
+                    currency_val = offers.get('priceCurrency', 'GBP')
+                    if price_val:
+                        return float(price_val), currency_val
+    except: pass
+    
+    return None
+
 # ================= 导入 Filler =================
 try:
-    from filler import get_first_result_darty, get_first_result_boulanger, get_first_result_fnac, get_first_result_amazon, update_product_link_in_csv
+    from filler import get_first_result_darty, get_first_result_boulanger, get_first_result_fnac, get_first_result_amazon, get_first_result_currys, update_product_link_in_csv
     FILLER_AVAILABLE = True
 except ImportError:
     print("[警告] 未能导入 filler.py")
@@ -402,6 +453,8 @@ async def process_product(sem, browser, item):
                             new_link = await get_first_result_boulanger(page, target_keyword)
                         elif is_amazon:
                             new_link = await get_first_result_amazon(page, target_keyword)
+                        elif "currys" in platform_lower:
+                            new_link = await get_first_result_currys(page, target_keyword)
                         
                         if new_link:
                             print(f"  [成功] 自动填充: {new_link}")
@@ -515,12 +568,16 @@ async def process_product(sem, browser, item):
                         elif "boulanger" in platform_lower:
                             try: await page.wait_for_selector(".price__amount, .price", timeout=5000)
                             except: pass
+                        elif "currys" in platform_lower:
+                            try: await page.wait_for_selector("strong[data-product='price'], .price, [data-test='current-price']", timeout=5000)
+                            except: pass
 
                         # 抓取价格
                         price_data = None
                         if "fnac" in platform_lower: price_data = await get_fnac_price(page)
                         elif "darty" in platform_lower: price_data = await get_darty_price(page)
                         elif "boulanger" in platform_lower: price_data = await get_boulanger_price(page)
+                        elif "currys" in platform_lower: price_data = await get_currys_price(page)
                         elif is_amazon:
                             # 缺货检测
                             is_oos = False

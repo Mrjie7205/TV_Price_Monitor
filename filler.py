@@ -206,6 +206,85 @@ async def get_first_result_fnac(page, keyword):
         print(f"  [Fnac搜索失败] {e}")
     return None
 
+async def get_first_result_currys(page, keyword):
+    """在 Currys.co.uk 搜索并提取第一个结果 (模拟人工: 先开首页再搜索)"""
+    print(f"  正在 Currys 搜索: {keyword} ...")
+    try:
+        # 1. 先访问首页
+        await page.goto("https://www.currys.co.uk", wait_until='domcontentloaded', timeout=30000)
+        await asyncio.sleep(random.uniform(2, 4))
+        
+        # 2. 接受 Cookie
+        try:
+            if await page.is_visible("#onetrust-accept-btn-handler", timeout=3000):
+                await page.click("#onetrust-accept-btn-handler")
+                await asyncio.sleep(1)
+        except: pass
+        
+        # 3. 找搜索框并输入
+        search_input = None
+        for selector in ["input[name='search']", "input[type='search']", "#search-input", 
+                         "input[data-test='search-input']", "input[placeholder*='Search']",
+                         "input[placeholder*='search']", "input.search", "#header-search"]:
+            try:
+                loc = page.locator(selector).first
+                if await loc.count() > 0 and await loc.is_visible():
+                    search_input = loc
+                    print(f"  [调试] 找到搜索框: {selector}")
+                    break
+            except: pass
+        
+        if search_input:
+            await search_input.click()
+            await search_input.fill("")
+            await asyncio.sleep(0.5)
+            await page.keyboard.type(keyword, delay=80)
+            await asyncio.sleep(0.5)
+            await page.keyboard.press("Enter")
+            await page.wait_for_load_state("domcontentloaded")
+            await asyncio.sleep(4)
+        else:
+            # 回退: URL 拼接
+            print("  [提示] 未找到搜索框，回退到 URL 拼接模式")
+            search_url = f"https://www.currys.co.uk/search/{urllib.parse.quote(keyword)}"
+            await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+            await asyncio.sleep(4)
+        
+        # 4. 调试日志
+        current_url = page.url
+        current_title = await page.title()
+        print(f"  [调试] 搜索后URL: {current_url}")
+        print(f"  [调试] 页面标题: {current_title}")
+        
+        # 5. 检查是否直接跳转到了商品页
+        if "/products/" in current_url and "currys.co.uk" in current_url:
+            print(f"  -> 直接跳转到了商品页: {current_url}")
+            return current_url
+        
+        # 6. 在搜索结果中查找商品链接 (仅 currys.co.uk 域名)
+        links = await page.locator("a[href*='currys.co.uk/products/']").all()
+        if not links:
+            # 也尝试相对路径
+            links = await page.locator("a[href^='/products/']").all()
+        
+        print(f"  [调试] 找到 {len(links)} 个 Currys 商品链接")
+        
+        seen = set()
+        for link_locator in links:
+            href = await link_locator.get_attribute("href")
+            if href and href not in seen:
+                seen.add(href)
+                if not href.startswith("http"):
+                    href = "https://www.currys.co.uk" + href
+                if "currys.co.uk" in href and "/search" not in href:
+                    print(f"  -> 找到潜在链接: {href}")
+                    return href
+        
+        print(f"  [Currys] 未在搜索结果中找到任何商品链接")
+    except Exception as e:
+        print(f"  [Currys搜索失败] {e}")
+    return None
+
 # ================= 辅助函数 =================
 
 def update_product_link_in_csv(product_name, new_url):
@@ -315,6 +394,8 @@ async def run_filler_async(headless=False):
                         new_link = await get_first_result_fnac(page, target_keyword)
                     elif "amazon" in platform_lower:
                         new_link = await get_first_result_amazon(page, target_keyword)
+                    elif "currys" in platform_lower:
+                        new_link = await get_first_result_currys(page, target_keyword)
                     else:
                         print(f"  [跳过] 未知平台: {platform_val}")
                 except Exception as e:
