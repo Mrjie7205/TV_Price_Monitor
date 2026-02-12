@@ -44,64 +44,86 @@ def get_first_result_darty(page, keyword):
     return None
 
 def get_first_result_boulanger(page, keyword):
-    """在 Boulanger 搜索并提取第一个结果"""
+    """
+    在 Boulanger 搜索并提取第一个结果
+    改进: 优先尝试模拟人工输入搜索，以规避软拦截。
+    """
     print(f"  正在 Boulanger 搜索: {keyword} ...")
-    search_url = f"https://www.boulanger.com/resultats?tr={urllib.parse.quote(keyword)}"
     
     try:
-        page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
-        
-        # === 处理 Cookie 弹窗 ===
-        # 常见 ID: onetrust-accept-btn-handler, 或 文本包含 Accepter
+        # 策略 1: 模拟人工输入 (更抗风控)
+        # 如果当前不在 Boulanger 或者是结果页但没结果，先去首页
+        if "boulanger.com" not in page.url or "resultats" in page.url or "Oups" in page.title():
+            page.goto("https://www.boulanger.com", wait_until='domcontentloaded', timeout=30000)
+            time.sleep(random.uniform(2, 4))
+
+        # 处理弹窗
         try:
-            # 尝试点击 "Accepter et Fermer" 或 "Tout accepter"
             if page.is_visible("#onetrust-accept-btn-handler", timeout=3000):
                 page.click("#onetrust-accept-btn-handler")
-                print("  [操作] 已点击关闭 Boulanger Cookie 弹窗")
-                time.sleep(1) # 等待弹窗消失
+                time.sleep(1)
             elif page.is_visible("button:has-text('Accepter')", timeout=1000):
                 page.click("button:has-text('Accepter')")
-                print("  [操作] 点击了 'Accepter' 按钮")
-                time.sleep(1)
-            elif page.is_visible("a:has-text('Continuer sans accepter')", timeout=1000):
-                page.click("a:has-text('Continuer sans accepter')")
-                print("  [操作] 点击了 'Continuer sans accepter'")
-                time.sleep(1)
-        except:
-            pass # 没弹窗就算了
+        except: pass
+
+        # 尝试定位搜索框
+        search_input = None
+        # 常见选择器: input[name='tr'], input[id='searching'], input[type='search']
+        for selector in ["input[name='tr']", "#searching", "input[type='search']"]:
+            if page.locator(selector).count() > 0:
+                search_input = page.locator(selector).first
+                break
+        
+        if search_input and search_input.is_visible():
+            search_input.click()
+            search_input.fill("")
+            time.sleep(0.5)
+            # 模拟逐字输入
+            page.keyboard.type(keyword, delay=100) 
+            time.sleep(0.5)
+            page.keyboard.press("Enter")
             
-        # Boulanger 商品列表项
+            # 等待搜索结果加载
+            page.wait_for_load_state("domcontentloaded")
+            time.sleep(3)
+        else:
+            # 如果找不到搜索框，回退到 URL 拼接
+            print("  [提示] 未找到搜索框，回退到 URL 拼接模式")
+            search_url = f"https://www.boulanger.com/resultats?tr={urllib.parse.quote(keyword)}"
+            page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+            time.sleep(2)
+
+        # === 提取结果 ===
         # 策略 2: 暴力搜索包含 '/ref/' 的链接 (Boulanger 商品页特征)
-        # 这比依赖 CSS class 更稳健
-        try:
-            # 等待一会确保内容加载
-            time.sleep(2) 
-            
-            # 获取所有链接
-            links = page.locator("a[href*='/ref/']").all()
-            
-            for link_locator in links:
-                href = link_locator.get_attribute("href")
-                if href:
-                    if not href.startswith("http"):
-                        href = "https://www.boulanger.com" + href
-                        
-                    # 过滤掉一些非商品链接 (如果有的话)
-                    # 通常 /ref/\d+ 就是商品
-                    print(f"  -> 找到潜在链接: {href}")
-                    return href
-        except Exception as e:
-            print(f"  [Error] 查找 /ref/ 链接失败: {e}")
+        
+        # 检查是否直接跳转到了商品页 (URL 包含 /ref/)
+        current_url = page.url
+        if "/ref/" in current_url:
+            print(f"  -> 直接跳转到了商品页: {current_url}")
+            return current_url
+
+        # 否则查找列表链接
+        links = page.locator("a[href*='/ref/']").all()
+        for link_locator in links:
+            href = link_locator.get_attribute("href")
+            if href:
+                if not href.startswith("http"):
+                    href = "https://www.boulanger.com" + href
                 
-    # 如果没找到，保存截图调试
-        print(f"  [警告] 未能在页面上找到商品链接。页面标题: {page.title()}")
-        screenshot_path = f"debug_filler_boulanger_{int(time.time())}.png"
-        page.screenshot(path=screenshot_path)
-        print(f"  [调试] 已保存截图: {screenshot_path}")
+                print(f"  -> 找到潜在链接: {href}")
+                return href
 
     except Exception as e:
         print(f"  [Boulanger搜索失败] {e}")
-            
+
+    # 如果没找到，保存截图调试
+    print(f"  [警告] 未能在页面上找到商品链接。页面标题: {page.title()}")
+    try:
+        screenshot_path = f"debug_filler_boulanger_{int(time.time())}.png"
+        page.screenshot(path=screenshot_path)
+        print(f"  [调试] 已保存截图: {screenshot_path}")
+    except: pass
+        
     return None
 
 def get_first_result_fnac(page, keyword):
