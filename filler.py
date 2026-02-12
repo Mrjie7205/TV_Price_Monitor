@@ -68,19 +68,27 @@ async def get_first_result_boulanger(page, keyword):
             await asyncio.sleep(0.5)
             await page.keyboard.press("Enter")
             await page.wait_for_load_state("domcontentloaded")
-            await asyncio.sleep(3)
+            await asyncio.sleep(4)  # 多等一秒确保结果加载
         else:
             print("  [提示] 未找到搜索框，回退到 URL 拼接模式")
             search_url = f"https://www.boulanger.com/resultats?tr={urllib.parse.quote(keyword)}"
             await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
 
+        # 调试日志: 当前 URL 和标题
         current_url = page.url
+        current_title = await page.title()
+        print(f"  [调试] 搜索后URL: {current_url}")
+        print(f"  [调试] 页面标题: {current_title}")
+
+        # 检查 1: 是否直接跳转到了商品页
         if "/ref/" in current_url:
             print(f"  -> 直接跳转到了商品页: {current_url}")
             return current_url
 
+        # 检查 2: 主选择器 - /ref/ 格式链接
         links = await page.locator("a[href*='/ref/']").all()
+        print(f"  [调试] 找到 {len(links)} 个 /ref/ 链接")
         for link_locator in links:
             href = await link_locator.get_attribute("href")
             if href:
@@ -88,6 +96,30 @@ async def get_first_result_boulanger(page, keyword):
                     href = "https://www.boulanger.com" + href
                 print(f"  -> 找到潜在链接: {href}")
                 return href
+
+        # 检查 3: 备用选择器 - 搜索结果卡片中的商品链接
+        fallback_selectors = [
+            ".product-list a[href*='boulanger.com']",
+            ".product-card a",
+            ".productList a[href]",
+            "a.product-thumb",
+            "article a[href]",
+        ]
+        for sel in fallback_selectors:
+            try:
+                fallback_links = await page.locator(sel).all()
+                for fl in fallback_links:
+                    href = await fl.get_attribute("href")
+                    if href and ("boulanger.com" in href or href.startswith("/")):
+                        if not href.startswith("http"):
+                            href = "https://www.boulanger.com" + href
+                        # 排除首页/分类页等非商品链接
+                        if "/resultats" not in href and "/c/" not in href and len(href) > 35:
+                            print(f"  -> 备用选择器找到链接: {href}")
+                            return href
+            except: pass
+        
+        print(f"  [Boulanger] 未在搜索结果中找到任何商品链接")
 
     except Exception as e:
         print(f"  [Boulanger搜索失败] {e}")
