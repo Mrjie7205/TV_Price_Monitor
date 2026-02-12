@@ -1,78 +1,62 @@
 ﻿Date,Time,Brand,Product Name,Country,Platform,Price,Currency,Page Title,Status
-2026-02-12,11:08:52,TCL,98X11K,FR,Boulanger,3999.0,EUR,TV Mini Led TCL 98X11K 2025-98 pouces (248cm) | Boulanger,Success
-2026-02-12,11:08:59,TCL,85X11K,FR,Fnac,2499.0,EUR,TV Tcl QD-Mini LED 85X11K 215 cm 2025 - TV LED/LCD - Achat & prix | fnac,Success
-2026-02-12,11:09:00,TCL,65C9K,FR,Boulanger,1199.0,EUR,TV Mini Led TCL 65C9K 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:09:02,TCL,65C89K,FR,Boulanger,999.0,EUR,TV Mini Led TCL 65C89K 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:09:03,TCL,65C79K,FR,Boulanger,749.0,EUR,TV Mini Led TCL 65C79K 2025 - 65 pouces ( 164 cm ) | Boulanger,Success
-2026-02-12,11:09:04,TCL,65C69K,FR,Boulanger,599.0,EUR,TV Mini Led TCL 65C69K 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:09:05,TCL,65P89K,FR,Boulanger,549.0,EUR,TV QLED TCL 65P89K 144Hz 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:09:06,TCL,65P79K,FR,Boulanger,529.0,EUR,TV QLED TCL 65P79K 2025 | Boulanger,Success
-2026-02-12,11:09:07,TCL,65P69K,FR,Boulanger,499.0,EUR,TV LED TCL 65P69K 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:09:08,TCL,40S59K,FR,Boulanger,229.0,EUR,TV QLED TCL 40S59K 2025-40 pouces (100cm) | Boulanger,Success
-2026-02-12,11:09:09,TCL,32S49K,FR,Boulanger,179.0,EUR,TV QLED TCL 32S49K 2025-32 pouces (80cm) | Boulanger,Success
-2026-02-12,11:09:18,SAMSUNG,65S92F,FR,Boulanger,1435.2,EUR,TV OLED SAMSUNG TQ65S92FA 2025 - 65 pouces ( 164 cm ) | Boulanger,Success
-2026-02-12,11:09:19,SAMSUNG,65S90F,FR,Boulanger,1599.0,EUR,TV OLED SAMSUNG TQ65S90F 4K AI Smart TV 2025 | Boulanger,Success
-2026-02-12,11:09:20,SAMSUNG,65S85F,FR,Boulanger,2199.0,EUR,TV OLED SAMSUNG TQ65S95F Anti-reflet 4K AI 2025 | Boulanger,Success
-2026-02-12,11:09:21,SAMSUNG,65QN90F,FR,Boulanger,1599.0,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN90F 4K AI 2025 | Boulanger,Success
-2026-02-12,11:09:22,SAMSUNG,65QN83F,FR,Boulanger,999.99,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN83F 4K AI 2025 | Boulanger,Success
-2026-02-12,11:09:23,SAMSUNG,65QN77F,FR,Boulanger,799.0,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN77F 2025-65 pouces 164cm | Boulanger,Success
-2026-02-12,11:09:24,SAMSUNG,50Q8F,FR,Boulanger,449.0,EUR,TV QLED SAMSUNG TQ50Q8FA 4K AI SmartTV 2025 | Boulanger,Success
-2026-02-12,11:09:25,SAMSUNG,65Q7F,FR,Boulanger,679.0,EUR,TV QLED SAMSUNG TQ65Q7F5 4K AI SmartTV 2025 | Boulanger,Success
-2026-02-12,11:09:26,SAMSUNG,65U8005F,FR,Boulanger,579.0,EUR,TV LED SAMSUNG TU65U8005F 4K AI SmartTV 2025 | Boulanger,Success
-2026-02-12,11:09:27,SAMSUNG,65U7005F,FR,Boulanger,499.0,EUR,TV LED SAMSUNG 65U7005F | Boulanger,Success
-2026-02-12,11:09:28,HISENSE,116UXQ,FR,Boulanger,14999.0,EUR,TV RGB MiniLED HISENSE 116UXQ 2025 - 116 pouces ( 293 cm ) | Boulanger,Success
-2026-02-12,11:09:29,HISENSE,100UXQ,FR,Boulanger,9999.0,EUR,TV RGB MiniLED HISENSE 100UXQ 2025 ( 253 cm ) | Boulanger,Success
-2026-02-12,11:09:29,HISENSE,65U8Q,FR,Boulanger,1190.0,EUR,TV Mini Led HISENSE 65U8Q 2025 (164cm) | Boulanger,Success
-2026-02-12,11:09:30,HISENSE,65U7Q Pro,FR,Boulanger,999.0,EUR,TV Mini Led HISENSE 65U7Q PRO 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:09:31,HISENSE,65U7Q,FR,Boulanger,999.0,EUR,TV Mini Led HISENSE 65U7Q PRO 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:09:32,HISENSE,65E79Q Pro,FR,Boulanger,699.0,EUR,TV QLED HISENSE 65E79Q PRO 2025 (164cm) | Boulanger,Success
-2026-02-12,11:09:34,HISENSE,65A6Q,FR,Boulanger,487.99,EUR,TV LED HISENSE 65A6Q 2025 (164cm) | Boulanger,Success
-2026-02-12,11:09:35,HISENSE,40A5Q,FR,Boulanger,228.99,EUR,TV LED HISENSE 40A5Q 2025 (100cm) | Boulanger,Success
-2026-02-12,11:09:36,HISENSE,40A4Q,FR,Boulanger,228.99,EUR,TV LED HISENSE 40A5Q 2025 (100cm) | Boulanger,Success
-2026-02-12,11:09:50,TCL,65PF650K,UK,Amazon,399.0,GBP,"TCL 65PF650K 65-inch 4K Ultra HD, HDR TV, Smart LED Fire TV (Dolby Vision, Dolby Atmos, DTS, HDR 10, Alexa built-in, Airplay2, Miracast) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:09:54,TCL,65C6KS-UK,UK,Amazon,569.0,GBP,"TCL 65C6KS-UK QD-Mini LED TV, 4K HDR Premium, Powered by Google TV (Dolby Vision & Atmos, Onkyo 2.1 Sound System, Hands-Free Voice Control, Apple AirPlay 2 & Alexa，2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:09:58,TCL,65Q7C-UK,UK,Amazon,719.0,GBP,"TCL 65Q7C-UK QD-Mini LED TV, 4K HDR Premium 2600, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, HVA Panel, Audio by Bang & Olufsen, 144Hz Motion Clarity Pro) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:10:01,TCL,65T6C-UK,UK,Amazon,449.0,GBP,"TCL 65T6C-UK 65” QLED 4K HDR TV, Fire TV (Smart TV with Dolby Vision & Atmos, HDR10+, Press & Ask Alexa, 2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:10:05,TCL,65Q6C-UK,UK,Amazon,649.0,GBP,"TCL 65Q6C-UK QD-Mini LED TV, 4K HDR Premium 1000nits, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, Onkyo 2.1 Sound System, 144Hz Motion Clarity Pro, 2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:10:15,TCL,65T8C-UK,UK,Amazon,497.0,GBP,"TCL 65T8C-UK 65"" 4K 144Hz Gaming QLED Onkyo 2.1 Dolby Atmos Google TV with Dolby Vision & HDR 10+ BBC iPlayer (2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:10:23,TCL,65A300W-UK,UK,Amazon,999.0,GBP,"TCL NXTVISION 65A300W-UK QLED PRO 4K Ultra HD TV, 4K HDR PRO, Matte Screen, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, 144Hz Motion Clarity Pro, compatible with Google Assistant) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:14:36,TCL,98X11K,FR,Boulanger,3999.0,EUR,TV Mini Led TCL 98X11K 2025-98 pouces (248cm) | Boulanger,Success
-2026-02-12,11:14:49,TCL,85X11K,FR,Fnac,2499.0,EUR,TV Tcl QD-Mini LED 85X11K 215 cm 2025 - TV LED/LCD - Achat & prix | fnac,Success
-2026-02-12,11:14:51,TCL,65C9K,FR,Boulanger,1199.0,EUR,TV Mini Led TCL 65C9K 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:14:52,TCL,65C89K,FR,Boulanger,999.0,EUR,TV Mini Led TCL 65C89K 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:14:53,TCL,65C79K,FR,Boulanger,749.0,EUR,TV Mini Led TCL 65C79K 2025 - 65 pouces ( 164 cm ) | Boulanger,Success
-2026-02-12,11:14:54,TCL,65C69K,FR,Boulanger,599.0,EUR,TV Mini Led TCL 65C69K 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:14:56,TCL,65P89K,FR,Boulanger,549.0,EUR,TV QLED TCL 65P89K 144Hz 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:14:57,TCL,65P79K,FR,Boulanger,529.0,EUR,TV QLED TCL 65P79K 2025 | Boulanger,Success
-2026-02-12,11:14:58,TCL,65P69K,FR,Boulanger,499.0,EUR,TV LED TCL 65P69K 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:14:58,TCL,40S59K,FR,Boulanger,229.0,EUR,TV QLED TCL 40S59K 2025-40 pouces (100cm) | Boulanger,Success
-2026-02-12,11:15:00,TCL,32S49K,FR,Boulanger,179.0,EUR,TV QLED TCL 32S49K 2025-32 pouces (80cm) | Boulanger,Success
-2026-02-12,11:15:07,SAMSUNG,65QN990F,FR,Boulanger,5590.0,EUR,SAMSUNG 65QN990F - Votre recherche SAMSUNG 65QN990F | Boulanger,Success
-2026-02-12,11:15:19,SAMSUNG,65QN900F,FR,Boulanger,3190.0,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN900F 2025-65 pouces 164cm | Boulanger,Success
-2026-02-12,11:15:20,SAMSUNG,65S95F,FR,Boulanger,2199.0,EUR,TV OLED SAMSUNG TQ65S95F Anti-reflet 4K AI 2025 | Boulanger,Success
-2026-02-12,11:15:21,SAMSUNG,65S92F,FR,Boulanger,1435.2,EUR,TV OLED SAMSUNG TQ65S92FA 2025 - 65 pouces ( 164 cm ) | Boulanger,Success
-2026-02-12,11:15:22,SAMSUNG,65S90F,FR,Boulanger,1599.0,EUR,TV OLED SAMSUNG TQ65S90F 4K AI Smart TV 2025 | Boulanger,Success
-2026-02-12,11:15:23,SAMSUNG,65S85F,FR,Boulanger,2199.0,EUR,TV OLED SAMSUNG TQ65S95F Anti-reflet 4K AI 2025 | Boulanger,Success
-2026-02-12,11:15:24,SAMSUNG,65QN90F,FR,Boulanger,1599.0,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN90F 4K AI 2025 | Boulanger,Success
-2026-02-12,11:15:25,SAMSUNG,65QN83F,FR,Boulanger,999.99,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN83F 4K AI 2025 | Boulanger,Success
-2026-02-12,11:15:26,SAMSUNG,65QN77F,FR,Boulanger,799.0,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN77F 2025-65 pouces 164cm | Boulanger,Success
-2026-02-12,11:15:27,SAMSUNG,50Q8F,FR,Boulanger,449.0,EUR,TV QLED SAMSUNG TQ50Q8FA 4K AI SmartTV 2025 | Boulanger,Success
-2026-02-12,11:15:28,SAMSUNG,65Q7F,FR,Boulanger,679.0,EUR,TV QLED SAMSUNG TQ65Q7F5 4K AI SmartTV 2025 | Boulanger,Success
-2026-02-12,11:15:29,SAMSUNG,65U8005F,FR,Boulanger,579.0,EUR,TV LED SAMSUNG TU65U8005F 4K AI SmartTV 2025 | Boulanger,Success
-2026-02-12,11:15:31,SAMSUNG,65U7005F,FR,Boulanger,499.0,EUR,TV LED SAMSUNG 65U7005F | Boulanger,Success
-2026-02-12,11:15:32,HISENSE,116UXQ,FR,Boulanger,14999.0,EUR,TV RGB MiniLED HISENSE 116UXQ 2025 - 116 pouces ( 293 cm ) | Boulanger,Success
-2026-02-12,11:15:32,HISENSE,100UXQ,FR,Boulanger,9999.0,EUR,TV RGB MiniLED HISENSE 100UXQ 2025 ( 253 cm ) | Boulanger,Success
-2026-02-12,11:15:33,HISENSE,65U8Q,FR,Boulanger,1190.0,EUR,TV Mini Led HISENSE 65U8Q 2025 (164cm) | Boulanger,Success
-2026-02-12,11:15:34,HISENSE,65U7Q Pro,FR,Boulanger,999.0,EUR,TV Mini Led HISENSE 65U7Q PRO 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:15:36,HISENSE,65U7Q,FR,Boulanger,999.0,EUR,TV Mini Led HISENSE 65U7Q PRO 2025-65 pouces (164cm) | Boulanger,Success
-2026-02-12,11:15:37,HISENSE,65E79Q Pro,FR,Boulanger,699.0,EUR,TV QLED HISENSE 65E79Q PRO 2025 (164cm) | Boulanger,Success
-2026-02-12,11:15:38,HISENSE,65A6Q,FR,Boulanger,487.99,EUR,TV LED HISENSE 65A6Q 2025 (164cm) | Boulanger,Success
-2026-02-12,11:15:39,HISENSE,40A5Q,FR,Boulanger,228.99,EUR,TV LED HISENSE 40A5Q 2025 (100cm) | Boulanger,Success
-2026-02-12,11:15:40,HISENSE,40A4Q,FR,Boulanger,228.99,EUR,TV LED HISENSE 40A5Q 2025 (100cm) | Boulanger,Success
-2026-02-12,11:15:51,TCL,65PF650K,UK,Amazon,399.0,GBP,"TCL 65PF650K 65-inch 4K Ultra HD, HDR TV, Smart LED Fire TV (Dolby Vision, Dolby Atmos, DTS, HDR 10, Alexa built-in, Airplay2, Miracast) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:15:54,TCL,65C6KS-UK,UK,Amazon,569.0,GBP,"TCL 65C6KS-UK QD-Mini LED TV, 4K HDR Premium, Powered by Google TV (Dolby Vision & Atmos, Onkyo 2.1 Sound System, Hands-Free Voice Control, Apple AirPlay 2 & Alexa，2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:15:57,TCL,65Q7C-UK,UK,Amazon,719.0,GBP,"TCL 65Q7C-UK QD-Mini LED TV, 4K HDR Premium 2600, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, HVA Panel, Audio by Bang & Olufsen, 144Hz Motion Clarity Pro) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:16:01,TCL,65T6C-UK,UK,Amazon,449.0,GBP,"TCL 65T6C-UK 65” QLED 4K HDR TV, Fire TV (Smart TV with Dolby Vision & Atmos, HDR10+, Press & Ask Alexa, 2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:16:11,TCL,65Q6C-UK,UK,Amazon,649.0,GBP,"TCL 65Q6C-UK QD-Mini LED TV, 4K HDR Premium 1000nits, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, Onkyo 2.1 Sound System, 144Hz Motion Clarity Pro, 2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:16:14,TCL,65T8C-UK,UK,Amazon,497.0,GBP,"TCL 65T8C-UK 65"" 4K 144Hz Gaming QLED Onkyo 2.1 Dolby Atmos Google TV with Dolby Vision & HDR 10+ BBC iPlayer (2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
-2026-02-12,11:16:17,TCL,65A300W-UK,UK,Amazon,999.0,GBP,"TCL NXTVISION 65A300W-UK QLED PRO 4K Ultra HD TV, 4K HDR PRO, Matte Screen, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, 144Hz Motion Clarity Pro, compatible with Google Assistant) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,98X11K,FR,Boulanger,3999.0,EUR,TV Mini Led TCL 98X11K 2025-98 pouces (248cm) | Boulanger,Success
+2026-02-12,15:46:41,TCL,85X11K,FR,Fnac,2499.0,EUR,TV Tcl QD-Mini LED 85X11K 215 cm 2025 - TV LED/LCD - Achat & prix | fnac,Success
+2026-02-12,15:46:41,TCL,65C9K,FR,Boulanger,1199.0,EUR,TV Mini Led TCL 65C9K 2025-65 pouces (164cm) | Boulanger,Success
+2026-02-12,15:46:41,TCL,65C89K,FR,Boulanger,999.0,EUR,TV Mini Led TCL 65C89K 2025-65 pouces (164cm) | Boulanger,Success
+2026-02-12,15:46:41,TCL,65C79K,FR,Boulanger,749.0,EUR,TV Mini Led TCL 65C79K 2025 - 65 pouces ( 164 cm ) | Boulanger,Success
+2026-02-12,15:46:41,TCL,65C69K,FR,Boulanger,599.0,EUR,TV Mini Led TCL 65C69K 2025-65 pouces (164cm) | Boulanger,Success
+2026-02-12,15:46:41,TCL,65P89K,FR,Boulanger,549.0,EUR,TV QLED TCL 65P89K 144Hz 2025-65 pouces (164cm) | Boulanger,Success
+2026-02-12,15:46:41,TCL,65P79K,FR,Boulanger,529.0,EUR,TV QLED TCL 65P79K 2025 | Boulanger,Success
+2026-02-12,15:46:41,TCL,65P69K,FR,Boulanger,499.0,EUR,TV LED TCL 65P69K 2025-65 pouces (164cm) | Boulanger,Success
+2026-02-12,15:46:41,TCL,40S59K,FR,Boulanger,229.0,EUR,TV QLED TCL 40S59K 2025-40 pouces (100cm) | Boulanger,Success
+2026-02-12,15:46:41,TCL,32S49K,FR,Boulanger,179.0,EUR,TV QLED TCL 32S49K 2025-32 pouces (80cm) | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65QN990F,FR,Boulanger,179.0,EUR,TV QLED TCL 32S49K 2025-32 pouces (80cm) | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65QN900F,FR,Boulanger,3190.0,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN900F 2025-65 pouces 164cm | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65S95F,FR,Boulanger,2199.0,EUR,TV OLED SAMSUNG TQ65S95F Anti-reflet 4K AI 2025 | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65S92F,FR,Boulanger,1435.2,EUR,TV OLED SAMSUNG TQ65S92FA 2025 - 65 pouces ( 164 cm ) | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65S90F,FR,Boulanger,1599.0,EUR,TV OLED SAMSUNG TQ65S90F 4K AI Smart TV 2025 | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65S85F,FR,Boulanger,2199.0,EUR,TV OLED SAMSUNG TQ65S95F Anti-reflet 4K AI 2025 | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65QN90F,FR,Boulanger,1599.0,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN90F 4K AI 2025 | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65QN83F,FR,Boulanger,999.99,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN83F 4K AI 2025 | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65QN77F,FR,Boulanger,799.0,EUR,TV Mini Led SAMSUNG NeoQLED TQ65QN77F 2025-65 pouces 164cm | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,50Q8F,FR,Boulanger,449.0,EUR,TV QLED SAMSUNG TQ50Q8FA 4K AI SmartTV 2025 | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65Q7F,FR,Boulanger,679.0,EUR,TV QLED SAMSUNG TQ65Q7F5 4K AI SmartTV 2025 | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65U8005F,FR,Boulanger,579.0,EUR,TV LED SAMSUNG TU65U8005F 4K AI SmartTV 2025 | Boulanger,Success
+2026-02-12,15:46:41,SAMSUNG,65U7005F,FR,Boulanger,499.0,EUR,TV LED SAMSUNG 65U7005F | Boulanger,Success
+2026-02-12,15:46:41,HISENSE,116UXQ,FR,Boulanger,14999.0,EUR,TV RGB MiniLED HISENSE 116UXQ 2025 - 116 pouces ( 293 cm ) | Boulanger,Success
+2026-02-12,15:46:41,HISENSE,100UXQ,FR,Boulanger,9999.0,EUR,TV RGB MiniLED HISENSE 100UXQ 2025 ( 253 cm ) | Boulanger,Success
+2026-02-12,15:46:41,HISENSE,65U8Q,FR,Boulanger,1190.0,EUR,TV Mini Led HISENSE 65U8Q 2025 (164cm) | Boulanger,Success
+2026-02-12,15:46:41,HISENSE,65U7Q Pro,FR,Boulanger,999.0,EUR,TV Mini Led HISENSE 65U7Q PRO 2025-65 pouces (164cm) | Boulanger,Success
+2026-02-12,15:46:41,HISENSE,65U7Q,FR,Boulanger,999.0,EUR,TV Mini Led HISENSE 65U7Q PRO 2025-65 pouces (164cm) | Boulanger,Success
+2026-02-12,15:46:41,HISENSE,65E79Q Pro,FR,Boulanger,699.0,EUR,TV QLED HISENSE 65E79Q PRO 2025 (164cm) | Boulanger,Success
+2026-02-12,15:46:41,HISENSE,65A6Q,FR,Boulanger,487.99,EUR,TV LED HISENSE 65A6Q 2025 (164cm) | Boulanger,Success
+2026-02-12,15:46:41,HISENSE,40A5Q,FR,Boulanger,228.99,EUR,TV LED HISENSE 40A5Q 2025 (100cm) | Boulanger,Success
+2026-02-12,15:46:41,HISENSE,40A4Q,FR,Boulanger,228.99,EUR,TV LED HISENSE 40A5Q 2025 (100cm) | Boulanger,Success
+2026-02-12,15:46:41,TCL,65PF650K,UK,Amazon,399.0,GBP,"TCL 65PF650K 65-inch 4K Ultra HD, HDR TV, Smart LED Fire TV (Dolby Vision, Dolby Atmos, DTS, HDR 10, Alexa built-in, Airplay2, Miracast) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,65C6KS-UK,UK,Amazon,569.0,GBP,"TCL 65C6KS-UK QD-Mini LED TV, 4K HDR Premium, Powered by Google TV (Dolby Vision & Atmos, Onkyo 2.1 Sound System, Hands-Free Voice Control, Apple AirPlay 2 & Alexa，2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,65Q7C-UK,UK,Amazon,719.0,GBP,"TCL 65Q7C-UK QD-Mini LED TV, 4K HDR Premium 2600, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, HVA Panel, Audio by Bang & Olufsen, 144Hz Motion Clarity Pro) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,65T6C-UK,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,65Q6C-UK,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,65T8C-UK,UK,Amazon,497.0,GBP,"TCL 65T8C-UK 65"" 4K 144Hz Gaming QLED Onkyo 2.1 Dolby Atmos Google TV with Dolby Vision & HDR 10+ BBC iPlayer (2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,65A300W-UK,UK,Amazon,999.0,GBP,"TCL NXTVISION 65A300W-UK QLED PRO 4K Ultra HD TV, 4K HDR PRO, Matte Screen, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, 144Hz Motion Clarity Pro, compatible with Google Assistant) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,32SF560-UK,UK,Amazon,137.0,GBP,"TCL 32SF560-UK 32"" Full HD QLED Direct LED Smart TV with Fire TV, Alexa Voice Control, Vivid Colour & Enhanced Brightness : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,40SF560-UK,UK,Amazon,169.0,GBP,"TCL 40SF560-UK 40"" Full HD QLED Direct LED Smart TV with Fire TV, Alexa Voice Control, Vivid Colour & Enhanced Brightness : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,43PF650K,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,43SF560-UK,UK,Amazon,179.0,GBP,"TCL 43SF560-UK 43"" Full HD QLED Direct LED Smart TV with Fire TV, Alexa Voice Control, Vivid Colour & Enhanced Brightness : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,55C6K-UK,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,75P6K-UK,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,43T6C-UK,UK,Amazon,229.0,GBP,"TCL 43T6C-UK 43” QLED 4K HDR TV, Fire TV (Smart TV with Dolby Vision & Atmos, HDR10+, Press & Ask Alexa, 2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,43P7K-UK,UK,Amazon,179.0,GBP,"TCL 43P7K-UK 43"" QLED 4K Ultra HD HDR Google TV (Google Assistant, Freeview Play, Dolby Atmos, Dolby Vision, HDR10+, Motion Clarity，2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,55PF650K,UK,Amazon,269.0,GBP,"TCL 55PF650K 55-inch 4K Ultra HD, HDR TV, Smart LED Fire TV (Dolby Vision, Dolby Atmos, DTS, HDR 10, Alexa built-in, Airplay2, Miracast) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,55C7K-UK,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,85T6C-UK,UK,Amazon,899.0,GBP,"TCL 85T6C-UK 85” QLED 4K HDR TV, Fire TV (Smart TV with Dolby Vision & Atmos, HDR10+, Press & Ask Alexa, 2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,50PF650K,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,50C6KS-UK,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,85C6K-UK,UK,Amazon,979.0,GBP,"TCL 85Q6C-UK QD-Mini LED TV, 4K HDR Premium 1000nits, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, Matte HVA Panel, Onkyo 2.1 Sound System, 144Hz Motion Clarity Pro, 2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,85C7K-UK,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,75C7K-UK,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,98C7K-UK,UK,Amazon,649.0,GBP,"TCL 55Q7C-UK QD-Mini LED TV, 4K HDR Premium 2600, Smart TV Powered by Google TV (Dolby Vision IQ & Atmos, HVA Panel, Audio by Bang & Olufsen, 144Hz Motion Clarity Pro) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,75P7K-UK,UK,Amazon,569.0,GBP,"TCL 75P7K-UK 75"" QLED 4K Ultra HD HDR Google TV (Google Assistant, Freeview Play, Dolby Atmos, Dolby Vision, HDR10+, 120Hz Game Accelerator, Motion Clarity，2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,98C6K-UK,UK,Amazon,395.0,GBP,"TCL 55C6KS-UK QD-Mini LED TV, 4K HDR Premium, Powered by Google TV (Dolby Vision & Atmos, Onkyo 2.1 Sound System, Hands-Free Voice Control, Apple AirPlay 2 & Alexa，2025 New Model) : Amazon.co.uk: Electronics & Photo",Success
+2026-02-12,15:46:41,TCL,55P7K-UK,UK,Amazon,,,,Failed: Anti-Bot Block
+2026-02-12,15:46:41,TCL,50P7K-UK,UK,Amazon,279.0,GBP,"TCL 50P7K-UK 50"" QLED 4K Ultra HD HDR Google TV (Google Assistant, Freeview Play, Dolby Atmos, Dolby Vision, HDR10+, Motion Clarity，2025 New Model) : Amazon.co.uk: Electronics & Photo",Success

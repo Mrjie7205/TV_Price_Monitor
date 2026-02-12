@@ -3,23 +3,23 @@ import os
 import time
 import random
 import urllib.parse
-from playwright.sync_api import sync_playwright
+import asyncio
+from playwright.async_api import async_playwright
 
 # 基础配置
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_FILE = os.path.join(BASE_DIR, "products.csv")
 USER_AGENT_STR = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
 
-# ================= 搜索函数 =================
+# ================= 搜索函数 (Async) =================
 
-def get_first_result_darty(page, keyword):
+async def get_first_result_darty(page, keyword):
     """在 Darty 搜索并提取第一个结果"""
     print(f"  正在 Darty 搜索: {keyword} ...")
     search_url = f"https://www.darty.com/nav/recherche?text={urllib.parse.quote(keyword)}"
     
     try:
-        page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
-        # 尝试常见的商品卡片链接选择器
+        await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
         selectors = [
             ".product_detail_link", 
             "a[data-automation-id='product_details_link']",
@@ -27,8 +27,8 @@ def get_first_result_darty(page, keyword):
             "div.product_list a" 
         ]
         for sel in selectors:
-            if page.is_visible(sel):
-                link = page.get_attribute(sel, "href")
+            if await page.is_visible(sel):
+                link = await page.get_attribute(sel, "href")
                 if link:
                     if not link.startswith("http"):
                         link = "https://www.darty.com" + link
@@ -38,51 +38,51 @@ def get_first_result_darty(page, keyword):
         print(f"  [Darty搜索失败] {e}")
     return None
 
-def get_first_result_boulanger(page, keyword):
+async def get_first_result_boulanger(page, keyword):
     """在 Boulanger 搜索并提取第一个结果 (模拟人工)"""
     print(f"  正在 Boulanger 搜索: {keyword} ...")
     try:
-        if "boulanger.com" not in page.url or "resultats" in page.url or "Oups" in page.title():
-            page.goto("https://www.boulanger.com", wait_until='domcontentloaded', timeout=30000)
-            time.sleep(random.uniform(2, 4))
+        if "boulanger.com" not in page.url or "resultats" in page.url or "Oups" in await page.title():
+            await page.goto("https://www.boulanger.com", wait_until='domcontentloaded', timeout=30000)
+            await asyncio.sleep(random.uniform(2, 4))
 
         try:
-            if page.is_visible("#onetrust-accept-btn-handler", timeout=3000):
-                page.click("#onetrust-accept-btn-handler")
-                time.sleep(1)
-            elif page.is_visible("button:has-text('Accepter')", timeout=1000):
-                page.click("button:has-text('Accepter')")
+            if await page.is_visible("#onetrust-accept-btn-handler", timeout=3000):
+                await page.click("#onetrust-accept-btn-handler")
+                await asyncio.sleep(1)
+            elif await page.is_visible("button:has-text('Accepter')", timeout=1000):
+                await page.click("button:has-text('Accepter')")
         except: pass
 
         search_input = None
         for selector in ["input[name='tr']", "#searching", "input[type='search']"]:
-            if page.locator(selector).count() > 0:
+            if await page.locator(selector).count() > 0:
                 search_input = page.locator(selector).first
                 break
         
-        if search_input and search_input.is_visible():
-            search_input.click()
-            search_input.fill("")
-            time.sleep(0.5)
-            page.keyboard.type(keyword, delay=100) 
-            time.sleep(0.5)
-            page.keyboard.press("Enter")
-            page.wait_for_load_state("domcontentloaded")
-            time.sleep(3)
+        if search_input and await search_input.is_visible():
+            await search_input.click()
+            await search_input.fill("")
+            await asyncio.sleep(0.5)
+            await page.keyboard.type(keyword, delay=100) 
+            await asyncio.sleep(0.5)
+            await page.keyboard.press("Enter")
+            await page.wait_for_load_state("domcontentloaded")
+            await asyncio.sleep(3)
         else:
             print("  [提示] 未找到搜索框，回退到 URL 拼接模式")
             search_url = f"https://www.boulanger.com/resultats?tr={urllib.parse.quote(keyword)}"
-            page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
-            time.sleep(2)
+            await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+            await asyncio.sleep(2)
 
         current_url = page.url
         if "/ref/" in current_url:
             print(f"  -> 直接跳转到了商品页: {current_url}")
             return current_url
 
-        links = page.locator("a[href*='/ref/']").all()
+        links = await page.locator("a[href*='/ref/']").all()
         for link_locator in links:
-            href = link_locator.get_attribute("href")
+            href = await link_locator.get_attribute("href")
             if href:
                 if not href.startswith("http"):
                     href = "https://www.boulanger.com" + href
@@ -93,40 +93,40 @@ def get_first_result_boulanger(page, keyword):
         print(f"  [Boulanger搜索失败] {e}")
     return None
 
-def get_first_result_amazon(page, keyword):
+async def get_first_result_amazon(page, keyword):
     """在 Amazon UK 搜索并提取第一个结果"""
     print(f"  正在 Amazon UK 搜索: {keyword} ...")
     try:
         if "amazon.co.uk" not in page.url:
-            page.goto("https://www.amazon.co.uk", wait_until='domcontentloaded', timeout=30000)
-            time.sleep(random.uniform(1, 3))
+            await page.goto("https://www.amazon.co.uk", wait_until='domcontentloaded', timeout=30000)
+            await asyncio.sleep(random.uniform(1, 3))
 
         try:
-            if page.is_visible("#sp-cc-accept", timeout=3000):
-                page.click("#sp-cc-accept")
-                time.sleep(1)
+            if await page.is_visible("#sp-cc-accept", timeout=3000):
+                await page.click("#sp-cc-accept")
+                await asyncio.sleep(1)
         except: pass
 
         search_input = page.locator("#twotabsearchtextbox").first
-        if search_input.is_visible():
-            search_input.click()
-            search_input.fill("")
-            time.sleep(0.5)
-            page.keyboard.type(keyword, delay=100)
-            time.sleep(0.5)
-            page.keyboard.press("Enter")
+        if await search_input.is_visible():
+            await search_input.click()
+            await search_input.fill("")
+            await asyncio.sleep(0.5)
+            await page.keyboard.type(keyword, delay=100)
+            await asyncio.sleep(0.5)
+            await page.keyboard.press("Enter")
         else:
             url = f"https://www.amazon.co.uk/s?k={urllib.parse.quote(keyword)}"
-            page.goto(url, wait_until='domcontentloaded')
+            await page.goto(url, wait_until='domcontentloaded')
 
-        page.wait_for_load_state("domcontentloaded")
-        time.sleep(3)
+        await page.wait_for_load_state("domcontentloaded")
+        await asyncio.sleep(3)
 
         # 暴力查找 /dp/ 链接
         try:
-            links = page.locator("div.s-main-slot a[href*='/dp/']").all()
+            links = await page.locator("div.s-main-slot a[href*='/dp/']").all()
             for link in links:
-                href = link.get_attribute("href")
+                href = await link.get_attribute("href")
                 if href and "slredirect" not in href and "#" not in href and "/dp/" in href:
                     if not href.startswith("http"):
                         href = "https://www.amazon.co.uk" + href
@@ -138,21 +138,22 @@ def get_first_result_amazon(page, keyword):
         print(f"  [Amazon搜索失败] {e}")
     return None
 
-def get_first_result_fnac(page, keyword):
+async def get_first_result_fnac(page, keyword):
     """在 Fnac 搜索并提取第一个结果"""
     print(f"  正在 Fnac 搜索: {keyword} ...")
     search_url = f"https://www.fnac.com/SearchResult/ResultList.aspx?Search={urllib.parse.quote(keyword)}"
     try:
-        page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
-        time.sleep(2)
+        await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+        await asyncio.sleep(2)
         try:
-            if page.is_visible("#onetrust-accept-btn-handler", timeout=3000):
-                page.click("#onetrust-accept-btn-handler")
+            if await page.is_visible("#onetrust-accept-btn-handler", timeout=3000):
+                await page.click("#onetrust-accept-btn-handler")
         except: pass
             
-        potential_links = page.locator("article a").all()
+        potential_links = await page.locator("article a").all()
         for link in potential_links:
-            href = link.get_attribute("href")
+            href = await link.get_attribute("href")
+            # 简化逻辑
             if href and "fnac.com" in href and ("/a" in href or "/mp" in href) and not "avis" in href:
                 print(f"  -> 找到链接: {href}")
                 return href
@@ -162,11 +163,13 @@ def get_first_result_fnac(page, keyword):
                     print(f"  -> 找到链接: {full_link}")
                     return full_link
         # Fallback
-        fallback_link = page.locator(".Article-title a").first.get_attribute("href")
-        if fallback_link:
-             if not fallback_link.startswith("http"):
-                 fallback_link = "https://www.fnac.com" + fallback_link
-             return fallback_link
+        first_el = page.locator(".Article-title a").first
+        if await first_el.count() > 0:
+             fallback_link = await first_el.get_attribute("href")
+             if fallback_link:
+                 if not fallback_link.startswith("http"):
+                     fallback_link = "https://www.fnac.com" + fallback_link
+                 return fallback_link
     except Exception as e:
         print(f"  [Fnac搜索失败] {e}")
     return None
@@ -174,8 +177,9 @@ def get_first_result_fnac(page, keyword):
 # ================= 辅助函数 =================
 
 def update_product_link_in_csv(product_name, new_url):
-    """更新 CSV 中的链接 (辅助函数，供 Monitor 调用)"""
-    # 重新定位 products.csv 位置，确保正确
+    """
+    更新 CSV 中的链接 (同步操作，因为文件IO不需要async)
+    """
     csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "products.csv")
     if not os.path.exists(csv_path): return False
         
@@ -207,10 +211,10 @@ def update_product_link_in_csv(product_name, new_url):
         print(f"  [系统错误] 更新 CSV 失败: {e}")
     return False
 
-# ================= 主程序 =================
+# ================= 主程序 (Async) =================
 
-def run_filler(headless=False):
-    print("启动自动填充器 (Filler)...")
+async def run_filler_async(headless=False):
+    print("启动自动填充器 (Async)...")
     
     csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "products.csv")
     if not os.path.exists(csv_path):
@@ -220,7 +224,6 @@ def run_filler(headless=False):
     # 1. 读取所有行
     rows = []
     fieldnames = []
-    
     with open(csv_path, 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames
@@ -234,7 +237,6 @@ def run_filler(headless=False):
         name = row.get("Product Name") or row.get("型号")
         platform = row.get("Platform") or row.get("平台")
         
-        # 如果链接为空或太短，且有名字和平台
         if (not link or len(link) < 10) and name and platform:
             to_fill_idx.append(i)
 
@@ -242,64 +244,69 @@ def run_filler(headless=False):
         print("所有商品都已有链接，无需填充。")
         return
     
-    print(f"发现 {len(to_fill_idx)} 个商品缺少链接，准备开始搜索...")
+    print(f"发现 {len(to_fill_idx)} 个商品缺少链接，准备开始并发搜索...")
 
-    # 3. 启动浏览器
-    updated_count = 0
-    with sync_playwright() as p:
+    # 3. 启动 Async Playwright
+    async with async_playwright() as p:
         browser_args = ['--disable-blink-features=AutomationControlled', '--start-maximized']
-        try:
-            browser = p.chromium.launch(headless=headless, channel="chrome", slow_mo=50, args=browser_args)
-        except:
-            browser = p.chromium.launch(headless=headless, slow_mo=50, args=browser_args)
-            
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            # 兼容多国 Locale
-            locale="en-US" 
-        )
-        context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        browser = await p.chromium.launch(headless=headless, args=browser_args)
         
-        page = context.new_page()
+        # 限制并发数
+        sem = asyncio.Semaphore(3)
 
-        # 4. 遍历处理
-        for idx in to_fill_idx:
-            row = rows[idx]
-            name = row.get("Product Name") or row.get("型号")
-            brand = row.get("Brand") or ""
-            platform_val = row.get("Platform") or row.get("平台", "")
-            platform_lower = platform_val.strip().lower()
-            
-            print(f"正在处理 [{platform_val}] {name} ...")
-            
-            new_link = None
-            target_keyword = f"{brand} {name}".strip()
-            
-            if "darty" in platform_lower:
-                new_link = get_first_result_darty(page, target_keyword)
-            elif "boulanger" in platform_lower:
-                new_link = get_first_result_boulanger(page, target_keyword)
-            elif "fnac" in platform_lower:
-                new_link = get_first_result_fnac(page, target_keyword)
-            elif "amazon" in platform_lower:
-                new_link = get_first_result_amazon(page, target_keyword)
-            else:
-                print(f"  [跳过] 未知平台: {platform_val}")
-                continue
+        async def process_item(idx):
+            async with sem:
+                context = await browser.new_context(
+                    user_agent=USER_AGENT_STR,
+                    locale="en-US"
+                )
+                await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                page = await context.new_page()
                 
+                row = rows[idx]
+                name = row.get("Product Name") or row.get("型号")
+                brand = row.get("Brand") or ""
+                platform_val = row.get("Platform") or row.get("平台", "")
+                platform_lower = platform_val.strip().lower()
+                
+                print(f"正在处理 [{platform_val}] {name} ...")
+                
+                new_link = None
+                target_keyword = f"{brand} {name}".strip()
+                
+                try:
+                    if "darty" in platform_lower:
+                        new_link = await get_first_result_darty(page, target_keyword)
+                    elif "boulanger" in platform_lower:
+                        new_link = await get_first_result_boulanger(page, target_keyword)
+                    elif "fnac" in platform_lower:
+                        new_link = await get_first_result_fnac(page, target_keyword)
+                    elif "amazon" in platform_lower:
+                        new_link = await get_first_result_amazon(page, target_keyword)
+                    else:
+                        print(f"  [跳过] 未知平台: {platform_val}")
+                except Exception as e:
+                    print(f"  [任务出错] {name}: {e}")
+                
+                await context.close()
+                return idx, new_link
+
+        # 创建任务
+        tasks = [process_item(i) for i in to_fill_idx]
+        results = await asyncio.gather(*tasks)
+
+        await browser.close()
+        
+        # 4. 更新结果
+        updated_count = 0
+        for idx, new_link in results:
             if new_link:
-                # 更新内存中的数据
+                row = rows[idx]
                 if "Link" in row: row["Link"] = new_link
                 elif "链接" in row: row["链接"] = new_link
                 elif "url" in row: row["url"] = new_link
                 updated_count += 1
                 print(f"  [成功] 填充链接: {new_link}")
-            else:
-                print(f"  [失败] 未搜到链接")
-                
-            time.sleep(random.uniform(2, 4))
-
-        browser.close()
 
     # 5. 写回文件
     if updated_count > 0:
@@ -315,6 +322,10 @@ def run_filler(headless=False):
     else:
         print("没有新的链接被填充。")
 
+def run_filler(headless=False):
+    """入口函数"""
+    asyncio.run(run_filler_async(headless))
+
 if __name__ == "__main__":
-    # Headless=False 方便调试 Amazon
+    # Headless=False 方便调试
     run_filler(headless=False)
