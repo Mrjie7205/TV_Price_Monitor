@@ -1,34 +1,41 @@
-﻿Brand,Product Name,Platform,Link
-TCL,98X11K,Boulanger,https://www.boulanger.com/ref/1211417
-TCL,85X11K,Fnac,https://www.fnac.com/TV-QD-Mini-LED-Tcl-85X11K-215-cm-4K-UHD-2025-Aluminium-brosse/a21354858/w-4
-TCL,65C9K,Boulanger,https://www.boulanger.com/ref/1221063
-TCL,65C89K,Boulanger,https://www.boulanger.com/ref/1221058
-TCL,65C79K,Boulanger,https://www.boulanger.com/ref/1221021
-TCL,65C69K,Boulanger,https://www.boulanger.com/ref/1218993
-TCL,65P89K,Boulanger,https://www.boulanger.com/ref/1218988
-TCL,65P79K,Boulanger,https://www.boulanger.com/ref/1218984
-TCL,65P69K,Boulanger,https://www.boulanger.com/ref/1224197
-TCL,40S59K,Boulanger,https://www.boulanger.com/ref/1224193
-TCL,32S49K,Boulanger,https://www.boulanger.com/ref/1224192
-SAMSUNG,65QN990F,Boulanger,https://www.boulanger.com/ref/1221613
-SAMSUNG,65QN900F,Boulanger,https://www.boulanger.com/ref/1221610
-SAMSUNG,65S95F,Boulanger,https://www.boulanger.com/ref/1221656
-SAMSUNG,65S92F,Boulanger,https://www.boulanger.com/ref/1229525
-SAMSUNG,65S90F,Boulanger,https://www.boulanger.com/ref/1221678
-SAMSUNG,65S85F,Boulanger,https://www.boulanger.com/ref/1221656
-SAMSUNG,65QN90F,Boulanger,https://www.boulanger.com/ref/1221605
-SAMSUNG,65QN83F,Boulanger,https://www.boulanger.com/ref/1221594
-SAMSUNG,65QN77F,Boulanger,https://www.boulanger.com/ref/1221549
-SAMSUNG,50Q8F,Boulanger,https://www.boulanger.com/ref/1221576
-SAMSUNG,65Q7F,Boulanger,https://www.boulanger.com/ref/1221676
-SAMSUNG,65U8005F,Boulanger,https://www.boulanger.com/ref/1221572
-SAMSUNG,65U7005F,Boulanger,https://www.boulanger.com/ref/1234711
-HISENSE,116UXQ,Boulanger,https://www.boulanger.com/ref/1229418
-HISENSE,100UXQ,Boulanger,https://www.boulanger.com/ref/1229416
-HISENSE,65U8Q,Boulanger,https://www.boulanger.com/ref/1222636
-HISENSE,65U7Q Pro,Boulanger,https://www.boulanger.com/ref/1222752
-HISENSE,65U7Q,Boulanger,https://www.boulanger.com/ref/1222752
-HISENSE,65E79Q Pro,Boulanger,https://www.boulanger.com/ref/1222700
-HISENSE,65A6Q,Boulanger,https://www.boulanger.com/ref/1222698
-HISENSE,40A5Q,Boulanger,https://www.boulanger.com/ref/1222715
-HISENSE,40A4Q,Boulanger,https://www.boulanger.com/ref/1222715
+﻿Brand,Product Name,Country,Platform,Link
+TCL,98X11K,FR,Boulanger,https://www.boulanger.com/ref/1211417
+TCL,85X11K,FR,Fnac,https://www.fnac.com/TV-QD-Mini-LED-Tcl-85X11K-215-cm-4K-UHD-2025-Aluminium-brosse/a21354858/w-4
+TCL,65C9K,FR,Boulanger,https://www.boulanger.com/ref/1221063
+TCL,65C89K,FR,Boulanger,https://www.boulanger.com/ref/1221058
+TCL,65C79K,FR,Boulanger,https://www.boulanger.com/ref/1221021
+TCL,65C69K,FR,Boulanger,https://www.boulanger.com/ref/1218993
+TCL,65P89K,FR,Boulanger,https://www.boulanger.com/ref/1218988
+TCL,65P79K,FR,Boulanger,https://www.boulanger.com/ref/1218984
+TCL,65P69K,FR,Boulanger,https://www.boulanger.com/ref/1224197
+TCL,40S59K,FR,Boulanger,https://www.boulanger.com/ref/1224193
+TCL,32S49K,FR,Boulanger,https://www.boulanger.com/ref/1224192
+SAMSUNG,65QN990F,FR,Boulanger,https://www.boulanger.com/ref/1224192
+SAMSUNG,65QN900F,FR,Boulanger,https://www.boulanger.com/ref/1221610
+SAMSUNG,65S95F,FR,Boulanger,https://www.boulanger.com/ref/1221656
+SAMSUNG,65S92F,FR,Boulanger,https://www.boulanger.com/ref/1229525
+SAMSUNG,65S90F,FR,Boulanger,https://www.boulanger.com/ref/1221678
+SAMSUNG,65S85F,FR,Boulanger,https://www.boulanger.com/ref/1221656
+SAMSUNG,65QN90F,FR,Boulanger,https://www.boulanger.com/ref/1221605
+SAMSUNG,65QN83F,FR,Boulanger,https://www.boulanger.com/ref/1221594
+SAMSUNG,65QN77F,FR,Boulanger,https://www.boulanger.com/ref/1221549
+SAMSUNG,50Q8F,FR,Boulanger,https://www.boulanger.com/ref/1221576
+SAMSUNG,65Q7F,FR,Boulanger,https://www.boulanger.com/ref/1221676
+SAMSUNG,65U8005F,FR,Boulanger,https://www.boulanger.com/ref/1221572
+SAMSUNG,65U7005F,FR,Boulanger,https://www.boulanger.com/ref/1234711
+HISENSE,116UXQ,FR,Boulanger,https://www.boulanger.com/ref/1229418
+HISENSE,100UXQ,FR,Boulanger,https://www.boulanger.com/ref/1229416
+HISENSE,65U8Q,FR,Boulanger,https://www.boulanger.com/ref/1222636
+HISENSE,65U7Q Pro,FR,Boulanger,https://www.boulanger.com/ref/1222752
+HISENSE,65U7Q,FR,Boulanger,https://www.boulanger.com/ref/1222752
+HISENSE,65E79Q Pro,FR,Boulanger,https://www.boulanger.com/ref/1222700
+HISENSE,65A6Q,FR,Boulanger,https://www.boulanger.com/ref/1222698
+HISENSE,40A5Q,FR,Boulanger,https://www.boulanger.com/ref/1222715
+HISENSE,40A4Q,FR,Boulanger,https://www.boulanger.com/ref/1222715
+TCL,65PF650K,UK,Amazon,https://www.amazon.co.uk/tcl-65pf650k-65-inch-4k-ultra-hd-hdr-tv-smart-led-fire-tv-dolby-vision-dolby-atmos-dts-hdr-10-alexa-built-in-airplay2-miracast/dp/B0D81MXY4N/ref=sr_1_4?dib=eyJ2IjoiMSJ9.N7drvjhrBR-AfNHfnSz8VLDfztHIl5uTitYC_8z2oCdC12WVoeku8lPZiHooIg27YRHdOvMPbygHMUbx5VA4Pu6gOrAVTau5GlIooAzXjwnYPq3aUWBgL8iJpGYSHv5VUFV7q8dp8uStOT6BQBkhW6QQwkEYOrVYCTAqeJuCpY58tltvpMRW9ewh38aA5VmRhjHUzMY41yhXwalCMbRv9w_1HlC0DoEQRXd4OvFHCyM.2210mHfFxq4yl400aWESRDN3h_ip5rfnl8tPmrolJeo&dib_tag=se&keywords=TCL+65PF650K&qid=1770864815&sr=8-4
+TCL,65C6KS-UK,UK,Amazon,https://www.amazon.co.uk/TCL-65C6KS-UK-QD-Mini-Hands-Free-Alexa%EF%BC%8C2025/dp/B0F25RCDF3/ref=sr_1_4?crid=29SF3DOQNVL9N&dib=eyJ2IjoiMSJ9.9Cy5dm9yZ1z1BE_CV6IN4M8QMXKHdMtLKIZFoB57f-JHRiJuTFQ29V7-04xm3VsQ5nUJLt04Mel6x2E8hAIzoHEQMo78B-GUryM5INU_E1_jaBeH_IKd68Ke9QeL1TY_mzC8vhRckQZTs8HQ-VT4sT4GIaOePVOrkYpKFZQEZoA-aw8tjhh_s0fAKnzaSiFdXqRWNG-luppEVi2S_I-31fC8IgvGWgYi3U8wH0FDywQ.Uc6oTO2qtJ0f-cZDD1tnumIfEsOJYgn2WHYyzWEhYKs&dib_tag=se&keywords=TCL+65C6KS-UK&qid=1770864829&sprefix=tcl+65c6ks-uk%2Caps%2C370&sr=8-4
+TCL,65Q7C-UK,UK,Amazon,https://www.amazon.co.uk/TCL-65Q7C-UK-QD-Mini-Premium-Powered/dp/B0FKD1KBQS/ref=sr_1_4?crid=3CDWSRZ1DKP6Q&dib=eyJ2IjoiMSJ9.OzVdk2cNRPrKPLDtSKPKCb8ZcdEIA5KdrRvDpA4nYUoViUNCbR32N2-dw-QpHPuCAC-Jf78T1Lcj7KWqJSPvnESjfwryfrAS14TZ5dmyKuyWcCQ6j7lc9LgS1PxjVztH8kswDwxrtLPw2tqK93prgWFcjxBVlyaplT4IDx65F5VqS1J32CHTxTqsfI2eWTHwXqRWNG-luppEVi2S_I-31UnLKzVYPIRB0ct-cke86rg.xyrUvaPz6da9t5TDH26GcZ-6IBpwHQhdW4A5taM_vy4&dib_tag=se&keywords=TCL+65Q7C-UK&qid=1770864838&sprefix=tcl+65q7c-uk%2Caps%2C368&sr=8-4
+TCL,65T6C-UK,UK,Amazon,https://www.amazon.co.uk/TCL-65T6C-UK-Smart-Dolby-Vision/dp/B0DW8PXV62/ref=sr_1_2?crid=24XR9ATK4JD7W&dib=eyJ2IjoiMSJ9.rDmwnEEA2-rsDNbKmhYcNSEqhI0ormJPq_3RPzjQkZ0DiIoID7MppeV0GsMTBSEX3aOiyw_dGXMIuLRFLWvMd3MIrkr3HhEKVwr1SntmcqLLCsXxqdAfDuR8kR3WK46gSiHXZd8sPWmcXI76ecSSdOFclXnPOj6N5yoR4uAU8r9mXIKlIuYGzLz3a5auqxjgcBqL60RVmVdCVFoUnMIaXap7cxXEEMiYh4ON3PvBS9A.9PjabXP2YcKPovl22KGhx-GUcGNiJxGT6MArvXr1Exw&dib_tag=se&keywords=TCL+65T6C-UK&qid=1770864846&sprefix=tcl+65t6c-uk%2Caps%2C370&sr=8-2
+TCL,65Q6C-UK,UK,Amazon,https://www.amazon.co.uk/TCL-65Q6C-UK-QD-Mini-Premium-1000nits/dp/B0DWDXMQCC/ref=sr_1_4?crid=35SVIW5P3CWI3&dib=eyJ2IjoiMSJ9.lidkIcGkvHovX90Qk0VJx3Pjf-o54DhNKILXHOF567BMq4y_s0qsqjrdtghmzxzwtU3dbcauSnwBLoQpepwL9cbclRVGETaWspojWjpz1m97XzzqUaeo3thCk4_WUYzpJLYZK1kOCEozY6PFR3tGGJxlEVSPDlKeO_YziUw9gbEdYbAlBIibMXga7UDGK-_DAWbrLnZCydIG6jbBr5oJDq7tP3setrtDBbsG-zt6qHo.SUonxEygGAYkREEtRk1If32tZfbukkB5IviAMAbdko8&dib_tag=se&keywords=TCL+65Q6C-UK&qid=1770866165&sprefix=tcl+65q6c-uk%2Caps%2C379&sr=8-4
+TCL,65T8C-UK,UK,Amazon,https://www.amazon.co.uk/TCL-65T8C-UK-Gaming-Google-iPlayer/dp/B0DT4DBJS5/ref=sr_1_2?crid=13J3E06VQ8GTE&dib=eyJ2IjoiMSJ9.xnIDbIuBdTBKAHDNK4HecdyCSk_XmmvYyZD6qsOonrjgssgiuhtnYmoBczMRJoHLAnfdgfBUArH-vjkwFJXd2uQJI8YtEEuXyfeN6zmO3UWPwXsrIW1jWPoWypA6a1-GOsYAgnYTbbK6i4PJmBjZDB3p7Og8fpLNF0XrqlI5X-dsap8s8wtgPdH3ZT-hhRC3pfAKctLTy5Voqj-ySJ6i-RyS0Ehs3SEImbnt6D4klzs.N-F_wLvoMDNHBk8galE6JWSRMkuvUqbedtsNS_83-uk&dib_tag=se&keywords=TCL+65T8C-UK&qid=1770865809&sprefix=tcl+65t8c-uk%2Caps%2C417&sr=8-2
+TCL,65A300W-UK,UK,Amazon,https://www.amazon.co.uk/TCL-NXTVISION-65A300W-UK-compatible-Assistant/dp/B0FKT4Y84P/ref=sr_1_2?crid=WWW7BE3KY91Q&dib=eyJ2IjoiMSJ9.HwC5h5U3E3gczntge2jj4NeTrPB1h5MFu4Yjo6i7MatRTPro4cr-3eiSSqJTR4lsSmOPujzfjfJfKQhwYuApsSohp7kDERugAuZve246pzo9lOByCnwFr8px2Bh5_hq2CC8jSHxkuYD5A_mFqVfJvKV9_GWN741B8ZoPUy1mkq22iJNZQwwCcwi1sMq-snSI11VyhjCpLVkdjDpMG8brfmV1krZUiTcD4MdXXOqSUYw.JnfBZM5qbsxq-7sOW6je2prUxK7qCJWH6d0jZYcoj74&dib_tag=se&keywords=TCL+65A300W-UK&qid=1770865819&sprefix=tcl+65a300w-uk%2Caps%2C417&sr=8-2
