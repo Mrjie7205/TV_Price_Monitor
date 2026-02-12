@@ -12,6 +12,8 @@ from playwright.async_api import async_playwright
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_FILE = os.path.join(BASE_DIR, "prices.csv")
 PRODUCTS_CSV = os.path.join(BASE_DIR, "products.csv")
+SCREENSHOTS_DIR = os.path.join(BASE_DIR, "debug_screenshots")
+os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
 # ================= 随机 User-Agent 池 =================
 USER_AGENTS = [
@@ -547,6 +549,12 @@ async def process_product(sem, browser, item):
                             else:
                                 print(f"  [{name}] 验证码逃逸失败，放弃")
                                 result['status'] = "Failed: Anti-Bot Block"
+                                try:
+                                    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+                                    screenshot_path = os.path.join(SCREENSHOTS_DIR, f"{safe_name}_anti_bot.png")
+                                    await page.screenshot(path=screenshot_path, full_page=True)
+                                    print(f"  [{name}] 调试截图已保存: {screenshot_path}")
+                                except: pass
                                 break
                         
                         # Anti-bot (Cookie 弹窗)
@@ -614,6 +622,14 @@ async def process_product(sem, browser, item):
                             if attempt == MAX_RETRIES - 1:
                                 if not result['status'].startswith("Failed"):
                                     result['status'] = "Failed: Price Not Found"
+                                # 截图保存用于调试
+                                try:
+                                    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+                                    screenshot_path = os.path.join(SCREENSHOTS_DIR, f"{safe_name}_price_not_found.png")
+                                    await page.screenshot(path=screenshot_path, full_page=True)
+                                    print(f"  [{name}] 调试截图已保存: {screenshot_path}")
+                                except Exception as ss_err:
+                                    print(f"  [{name}] 截图失败: {ss_err}")
                             else:
                                 await asyncio.sleep(2)
                                 

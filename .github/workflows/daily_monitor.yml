@@ -32,6 +32,15 @@ jobs:
           HEADLESS_MODE: "true" # 确保脚本以 Headless 运行
         run: python monitor.py
 
+      - name: Upload Debug Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: debug_screenshots/
+          retention-days: 3
+          if-no-files-found: ignore
+
       - name: Check for changes
         run: git status
 
