@@ -487,6 +487,9 @@ except ImportError:
     print("[警告] 未能导入 filler.py")
     FILLER_AVAILABLE = False
 
+# 定义全局锁，防止并发读写 products.csv 冲突
+CSV_LOCK = asyncio.Lock()
+
 # ================= Amazon 专属: 首页预热 =================
 
 async def amazon_warmup(page):
@@ -588,7 +591,8 @@ async def process_product(sem, browser, item, historical_prices):
                             print(f"  [成功] 自动填充: {new_link}")
                             url = new_link
                             result['url'] = new_link
-                            update_product_link_in_csv(name, new_link)
+                            async with CSV_LOCK:
+                                update_product_link_in_csv(name, new_link)
                             just_filled = True
                         else:
                             print(f"  [{name}] 未搜到链接")
