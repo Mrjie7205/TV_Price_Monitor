@@ -1,5 +1,6 @@
-import asyncio
+﻿import asyncio
 import csv
+import json
 import os
 import random
 import re
@@ -146,16 +147,62 @@ def load_products_from_csv():
     print(f"已加载 {len(products)} 个商品任务")
     return products
 
-def log_price_update(date_str, time_str, brand, name, country, platform, price, currency, page_title, status="Success"):
+def load_latest_historical_prices():
+    """
+    读取 prices.csv 获取每个商品的最新有效价格
+    返回字典 Key: {Name}_{Country}_{Platform}, Value: Price (float)
+    """
+    historical_prices = {}
+    if not os.path.exists(CSV_FILE):
+        return historical_prices
+
+    try:
+        with open(CSV_FILE, 'r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                status = row.get("Status")
+                price_str = row.get("Price")
+                name = row.get("Product Name")
+                country = row.get("Country")
+                platform = row.get("Platform")
+                
+                if status == "Success" and price_str:
+                    try:
+                        price = float(price_str)
+                        key = f"{name}_{country}_{platform}"
+                        historical_prices[key] = price
+                    except ValueError:
+                        continue
+    except Exception as e:
+        print(f"[提示] 读取历史价格失败 (可能文件格式较旧): {e}")
+    
+    return historical_prices
+
+def log_price_update(date_str, time_str, brand, name, country, platform, price, currency, page_title, price_trend="-", status="Success"):
     """写入 CSV"""
     file_exists = os.path.isfile(CSV_FILE)
+    header = ["Date", "Time", "Brand", "Product Name", "Country", "Platform", "Price", "Currency", "Page Title", "Status", "Price_Trend"]
+    
     try:
         with open(CSV_FILE, 'a', newline='', encoding='utf-8-sig') as f:
-            writer = csv.writer(f)
+            writer = csv.DictWriter(f, fieldnames=header)
             if not file_exists:
-                writer.writerow(["Date", "Time", "Brand", "Product Name", "Country", "Platform", "Price", "Currency", "Page Title", "Status"])
-            writer.writerow([date_str, time_str, brand, name, country, platform, price, currency, page_title, status])
-            print(f"  [记录] {currency} {price} | Status: {status}")
+                writer.writeheader()
+            
+            writer.writerow({
+                "Date": date_str,
+                "Time": time_str,
+                "Brand": brand,
+                "Product Name": name,
+                "Country": country,
+                "Platform": platform,
+                "Price": price,
+                "Currency": currency,
+                "Page Title": page_title,
+                "Status": status,
+                "Price_Trend": price_trend
+            })
+            print(f"  [记录] {currency} {price} | Trend: {price_trend} | Status: {status}")
     except Exception as e:
         print(f"  [错误] 写入 CSV 失败: {e}")
 
@@ -213,43 +260,122 @@ def clean_duplicate_links_in_csv():
     else:
         print("[清洗] 未发现重复链接，跳过。")
 
+async def get_price_from_schema(page):
+    """通用方法：从 JSON-LD 或 Meta 标签中提取价格"""
+    # 1. Meta Tags (Open Graph / Product Meta)
+    try:
+        amount = await page.get_attribute("meta[property='product:price:amount']", "content", timeout=500)
+        if amount:
+            currency = await page.get_attribute("meta[property='product:price:currency']", "content") or "EUR"
+            return float(amount.replace(",", ".")), currency
+    except: pass
+
+    # 2. JSON-LD
+    try:
+        scripts = await page.locator("script[type='application/ld+json']").all()
+        for script in scripts:
+            text = await script.text_content()
+            if text and '"price"' in text:
+                try:
+                    data = json.loads(text)
+                    items = data if isinstance(data, list) else [data]
+                    for item in items:
+                        # 兼容多种常见的 Schema 嵌套结构
+                        if isinstance(item, dict):
+                            offers = item.get('offers')
+                            if not offers and '@graph' in item:
+                                for sub in item['@graph']:
+                                    if 'offers' in sub:
+                                        offers = sub['offers']
+                                        break
+                            
+                            if offers:
+                                offer_list = offers if isinstance(offers, list) else [offers]
+                                for offer in offer_list:
+                                    if isinstance(offer, dict):
+                                        p = offer.get('price')
+                                        if p:
+                                            return float(str(p).replace(",", ".")), offer.get('priceCurrency', 'EUR')
+                except: continue
+    except: pass
+    return None
+
 # ================= 爬虫策略函数 (Async) =================
 
 async def get_fnac_price(page):
-    selectors = [".f-price", ".userPrice", ".product-price", ".price", "span[class*='price']"]
+    # 1. 尝试 Schema/Meta
+    schema_res = await get_price_from_schema(page)
+    if schema_res: return schema_res
+
+    # 2. CSS 候选
+    selectors = [".f-price", ".userPrice", ".product-price", ".price"]
     for sel in selectors:
         try:
-            if await page.is_visible(sel, timeout=2000):
-                text = await page.inner_text(sel)
-                result = clean_price(text)
-                if result: return result
+            elements = await page.locator(sel).all()
+            for el in elements:
+                if await el.is_visible():
+                    # 排除被划掉的价格
+                    is_crossed = await el.evaluate("el => window.getComputedStyle(el).textDecoration.includes('line-through') || el.closest('.is-crossed, .old-price')")
+                    if not is_crossed:
+                        text = await el.inner_text()
+                        result = clean_price(text)
+                        if result: return result
         except: pass
     return None
 
 async def get_darty_price(page):
-    selectors = [".product_price", ".price", ".darty_price", "span[class*='price']"]
+    # 1. 尝试 Schema/Meta
+    schema_res = await get_price_from_schema(page)
+    if schema_res: return schema_res
+
+    # 2. CSS 候选
+    selectors = [".product_price", ".darty_price", ".price"]
     for sel in selectors:
         try:
-            if await page.is_visible(sel, timeout=2000):
-                text = await page.inner_text(sel)
-                result = clean_price(text)
-                if result: return result
+            elements = await page.locator(sel).all()
+            for el in elements:
+                if await el.is_visible():
+                    is_crossed = await el.evaluate("el => window.getComputedStyle(el).textDecoration.includes('line-through') || el.closest('.old-price, .crossed')")
+                    if not is_crossed:
+                        text = await el.inner_text()
+                        result = clean_price(text)
+                        if result: return result
         except: pass
     return None
 
 async def get_boulanger_price(page):
+    # 1. 尝试 Schema/Meta (Boulanger 的 Schema 通常非常准确)
+    schema_res = await get_price_from_schema(page)
+    if schema_res: return schema_res
+
+    # 2. 针对性 CSS: 优先尝试 .price__main (主价格)
     try:
-        price_main = page.locator(".price__amount").first
-        if await price_main.is_visible(timeout=3000):
+        price_main = page.locator(".price__main .price__amount").first
+        if await price_main.is_visible(timeout=2000):
             text = await price_main.inner_text()
-            text = text.replace("\n", ",")
-            result = clean_price(text)
+            result = clean_price(text.replace("\n", ","))
             if result: return result
     except: pass
-    selectors = [".price", "span[class*='price']"]
-    for sel in selectors:
+
+    # 3. 兜底: 寻找所有 .price__amount 并排除划线价格
+    try:
+        elements = await page.locator(".price__amount").all()
+        for el in elements:
+            if await el.is_visible():
+                is_invalid = await el.evaluate("""el => {
+                    const style = window.getComputedStyle(el);
+                    return style.textDecoration.includes('line-through') || el.closest('.price__crossed, .price__old');
+                }""")
+                if not is_invalid:
+                    text = await el.inner_text()
+                    result = clean_price(text.replace("\n", ","))
+                    if result: return result
+    except: pass
+
+    # 4. 通用兜底
+    for sel in [".price", "span[class*='price']"]:
         try:
-            if await page.is_visible(sel, timeout=2000):
+            if await page.is_visible(sel, timeout=1000):
                 text = await page.inner_text(sel)
                 result = clean_price(text)
                 if result: return result
@@ -339,7 +465,6 @@ async def get_currys_price(page):
     try:
         scripts = await page.locator("script[type='application/ld+json']").all()
         for script in scripts:
-            import json
             content = await script.text_content()
             if content and '"price"' in content:
                 data = json.loads(content)
@@ -396,7 +521,7 @@ async def amazon_warmup(page):
 
 # ================= 主逻辑 (Async) =================
 
-async def process_product(sem, browser, item):
+async def process_product(sem, browser, item, historical_prices):
     """单个商品处理逻辑 (并发单元, 返回结果而不直接写入)"""
     async with sem:
         # 初始化
@@ -412,7 +537,8 @@ async def process_product(sem, browser, item):
             "brand": brand, "name": name, "country": country,
             "platform": platform, "url": url,
             "price": None, "currency": None, "title": "",
-            "status": "Pending"
+            "status": "Pending",
+            "price_trend": "-"
         }
         
         print(f"\n正在处理 [{country}] {name} ({platform}) ...")
@@ -436,7 +562,7 @@ async def process_product(sem, browser, item):
             if is_amazon:
                 await amazon_warmup(page)
             
-            # === 大循环: 允许 "链接失效 -> 清空 -> 重新搜索" ===
+            # === 大循环: 允许 \"链接失效 -> 清空 -> 重新搜索\" ===
             MAX_LOOPS = 2
             for loop_index in range(MAX_LOOPS):
                 
@@ -602,8 +728,22 @@ async def process_product(sem, browser, item):
                             price_data = await get_amazon_price(page)
                         
                         if price_data:
-                            result['price'], result['currency'] = price_data
+                            new_price, currency = price_data
+                            result['price'] = new_price
+                            result['currency'] = currency
                             result['status'] = "Success"
+                            
+                            # === 价格趋势逻辑 ===
+                            key = f"{name}_{country}_{platform}"
+                            old_price = historical_prices.get(key)
+                            if old_price is None:
+                                result['price_trend'] = "新上线"
+                            elif new_price < old_price:
+                                result['price_trend'] = "降价"
+                            elif new_price > old_price:
+                                result['price_trend'] = "涨价"
+                            else:
+                                result['price_trend'] = "持平"
                             
                             # 成功后读取标题
                             final_title = await page.title()
@@ -614,7 +754,7 @@ async def process_product(sem, browser, item):
                                 except: pass
                             result['title'] = final_title
                             
-                            print(f"  [成功] {name}: {result['currency']} {result['price']}")
+                            print(f"  [成功] {name}: {result['currency']} {result['price']} ({result['price_trend']})")
                             price_found = True
                             break
                         else:
@@ -657,6 +797,9 @@ async def run_scraper_async(headless=True):
     # 运行前: 清洗重复链接
     clean_duplicate_links_in_csv()
     
+    # 加载历史价格用于趋势对比
+    historical_prices = load_latest_historical_prices()
+    
     products = load_products_from_csv()
     if not products: return
 
@@ -678,12 +821,12 @@ async def run_scraper_async(headless=True):
         
         sem = asyncio.Semaphore(3)
         
-        tasks = [process_product(sem, browser, item) for item in products]
+        tasks = [process_product(sem, browser, item, historical_prices) for item in products]
         results = await asyncio.gather(*tasks)
         
         await browser.close()
     
-    # 按顺序写入 CSV
+    # 按顺序写入结果
     print("\n正在按顺序写入结果...")
     now = datetime.now()
     date_str = now.strftime("%Y-%m-%d")
@@ -693,7 +836,9 @@ async def run_scraper_async(headless=True):
         log_price_update(
             date_str, time_str,
             res['brand'], res['name'], res['country'], res['platform'],
-            res['price'], res['currency'], res['title'], res['status']
+            res['price'], res['currency'], res['title'],
+            price_trend=res['price_trend'],
+            status=res['status']
         )
             
     print("所有任务完成。")

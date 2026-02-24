@@ -4,12 +4,49 @@ import time
 import random
 import urllib.parse
 import asyncio
+import re
 from playwright.async_api import async_playwright
 
 # 基础配置
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_FILE = os.path.join(BASE_DIR, "products.csv")
 USER_AGENT_STR = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+
+# ================= 辅助验证函数 =================
+
+def validate_link(link, keyword, page_title=""):
+    """
+    验证搜索到的链接是否与关键词匹配。
+    逻辑：检查关键词中的重要部分（如品牌和型号）是否出现在链接或页面标题中。
+    """
+    if not link: return False
+    
+    # 将关键词拆分为部分，过滤短词
+    parts = [p.strip().lower() for p in keyword.split() if len(p.strip()) > 2]
+    if not parts: return True # 如果没法拆分出有效词，保守处理
+
+    link_lower = link.lower()
+    title_lower = page_title.lower() if page_title else ""
+    
+    # 核心验证逻辑：至少要包含品牌或型号中的一个“硬性”识别词
+    # 比如 "Samsung 65Q7F", 如果链接或标题里完全没出现 "Samsung" 也没出现 "65Q7F", 就认为不匹配
+    matches = 0
+    for p in parts:
+        if p in link_lower or p in title_lower:
+            matches += 1
+            
+    # 如果匹配到的关键词部分占比太低，认为有误搜风险
+    # 特别是针对长关键词，如果一个识别度高的词都没对上，直接排除
+    if matches == 0:
+        return False
+    
+    # 针对三星这类品牌，如果搜出来了 DJI 这种完全不相干的品牌关键字，直接拍死
+    anti_keywords = ["dji", "drone", "mavic", "fly-more"]
+    if any(ak in keyword.lower() for ak in ["samsung", "tcl", "hisense", "tv"]):
+        if any(ak in link_lower or ak in title_lower for ak in anti_keywords):
+            return False
+
+    return True
 
 # ================= 搜索函数 (Async) =================
 
@@ -27,13 +64,18 @@ async def get_first_result_darty(page, keyword):
             "div.product_list a" 
         ]
         for sel in selectors:
-            if await page.is_visible(sel):
-                link = await page.get_attribute(sel, "href")
-                if link:
-                    if not link.startswith("http"):
-                        link = "https://www.darty.com" + link
-                    print(f"  -> 找到链接: {link}")
-                    return link
+            locators = await page.locator(sel).all()
+            for loc in locators:
+                if await loc.is_visible():
+                    link = await loc.get_attribute("href")
+                    if link:
+                        if not link.startswith("http"):
+                            link = "https://www.darty.com" + link
+                        
+                        # 验证链接
+                        if validate_link(link, keyword):
+                            print(f"  -> 找到链接: {link}")
+                            return link
     except Exception as e:
         print(f"  [Darty搜索失败] {e}")
     return None
@@ -50,8 +92,6 @@ async def get_first_result_boulanger(page, keyword):
             if await page.is_visible("#onetrust-accept-btn-handler", timeout=3000):
                 await page.click("#onetrust-accept-btn-handler")
                 await asyncio.sleep(1)
-            elif await page.is_visible("button:has-text('Accepter')", timeout=1000):
-                await page.click("button:has-text('Accepter')")
         except: pass
 
         search_input = None
@@ -68,58 +108,32 @@ async def get_first_result_boulanger(page, keyword):
             await asyncio.sleep(0.5)
             await page.keyboard.press("Enter")
             await page.wait_for_load_state("domcontentloaded")
-            await asyncio.sleep(4)  # 多等一秒确保结果加载
+            await asyncio.sleep(4)
         else:
-            print("  [提示] 未找到搜索框，回退到 URL 拼接模式")
             search_url = f"https://www.boulanger.com/resultats?tr={urllib.parse.quote(keyword)}"
             await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
             await asyncio.sleep(3)
 
-        # 调试日志: 当前 URL 和标题
         current_url = page.url
         current_title = await page.title()
-        print(f"  [调试] 搜索后URL: {current_url}")
-        print(f"  [调试] 页面标题: {current_title}")
-
-        # 检查 1: 是否直接跳转到了商品页
+        
+        # 检查是否直接跳转
         if "/ref/" in current_url:
-            print(f"  -> 直接跳转到了商品页: {current_url}")
-            return current_url
+            if validate_link(current_url, keyword, current_title):
+                return current_url
 
-        # 检查 2: 主选择器 - /ref/ 格式链接
+        # 提取结果列表
         links = await page.locator("a[href*='/ref/']").all()
-        print(f"  [调试] 找到 {len(links)} 个 /ref/ 链接")
         for link_locator in links:
             href = await link_locator.get_attribute("href")
             if href:
                 if not href.startswith("http"):
                     href = "https://www.boulanger.com" + href
-                print(f"  -> 找到潜在链接: {href}")
-                return href
-
-        # 检查 3: 备用选择器 - 搜索结果卡片中的商品链接
-        fallback_selectors = [
-            ".product-list a[href*='boulanger.com']",
-            ".product-card a",
-            ".productList a[href]",
-            "a.product-thumb",
-            "article a[href]",
-        ]
-        for sel in fallback_selectors:
-            try:
-                fallback_links = await page.locator(sel).all()
-                for fl in fallback_links:
-                    href = await fl.get_attribute("href")
-                    if href and ("boulanger.com" in href or href.startswith("/")):
-                        if not href.startswith("http"):
-                            href = "https://www.boulanger.com" + href
-                        # 排除首页/分类页等非商品链接
-                        if "/resultats" not in href and "/c/" not in href and len(href) > 35:
-                            print(f"  -> 备用选择器找到链接: {href}")
-                            return href
-            except: pass
-        
-        print(f"  [Boulanger] 未在搜索结果中找到任何商品链接")
+                
+                # 获取该链接可能的文本描述
+                desc = await link_locator.inner_text()
+                if validate_link(href, keyword, desc):
+                    return href
 
     except Exception as e:
         print(f"  [Boulanger搜索失败] {e}")
@@ -154,18 +168,22 @@ async def get_first_result_amazon(page, keyword):
         await page.wait_for_load_state("domcontentloaded")
         await asyncio.sleep(3)
 
-        # 暴力查找 /dp/ 链接
-        try:
-            links = await page.locator("div.s-main-slot a[href*='/dp/']").all()
-            for link in links:
-                href = await link.get_attribute("href")
-                if href and "slredirect" not in href and "#" not in href and "/dp/" in href:
-                    if not href.startswith("http"):
-                        href = "https://www.amazon.co.uk" + href
-                    print(f"  -> 找到潜在链接: {href}")
+        links = await page.locator("div.s-main-slot a[href*='/dp/']").all()
+        for link in links:
+            href = await link.get_attribute("href")
+            if href and "slredirect" not in href and "#" not in href and "/dp/" in href:
+                if not href.startswith("http"):
+                    href = "https://www.amazon.co.uk" + href
+                
+                # 检查标题
+                parent_h2 = await page.evaluate_handle("el => el.closest('div.s-result-item').querySelector('h2')", link)
+                title_text = ""
+                if parent_h2: 
+                    title_text = await (await parent_h2.get_property("innerText")).json_value()
+                
+                if validate_link(href, keyword, title_text):
+                    print(f"  -> 找到链接: {href}")
                     return href
-        except Exception as e:
-            print(f"  [Amazon提取失败] {e}")       
     except Exception as e:
         print(f"  [Amazon搜索失败] {e}")
     return None
@@ -185,52 +203,38 @@ async def get_first_result_fnac(page, keyword):
         potential_links = await page.locator("article a").all()
         for link in potential_links:
             href = await link.get_attribute("href")
-            # 简化逻辑
-            if href and "fnac.com" in href and ("/a" in href or "/mp" in href) and not "avis" in href:
-                print(f"  -> 找到链接: {href}")
-                return href
-            elif href and not href.startswith("http"): 
-                full_link = "https://www.fnac.com" + href
-                if ("/a" in full_link or "/mp" in full_link) and not "avis" in full_link:
-                    print(f"  -> 找到链接: {full_link}")
-                    return full_link
-        # Fallback
-        first_el = page.locator(".Article-title a").first
-        if await first_el.count() > 0:
-             fallback_link = await first_el.get_attribute("href")
-             if fallback_link:
-                 if not fallback_link.startswith("http"):
-                     fallback_link = "https://www.fnac.com" + fallback_link
-                 return fallback_link
+            title = await link.inner_text()
+            if href:
+                if not href.startswith("http"): 
+                    href = "https://www.fnac.com" + href
+                
+                if ("/a" in href or "/mp" in href) and not "avis" in href:
+                    if validate_link(href, keyword, title):
+                        print(f"  -> 找到链接: {href}")
+                        return href
     except Exception as e:
         print(f"  [Fnac搜索失败] {e}")
     return None
 
 async def get_first_result_currys(page, keyword):
-    """在 Currys.co.uk 搜索并提取第一个结果 (模拟人工: 先开首页再搜索)"""
+    """在 Currys.co.uk 搜索并提取第一个结果"""
     print(f"  正在 Currys 搜索: {keyword} ...")
     try:
-        # 1. 先访问首页
         await page.goto("https://www.currys.co.uk", wait_until='domcontentloaded', timeout=30000)
         await asyncio.sleep(random.uniform(2, 4))
         
-        # 2. 接受 Cookie
         try:
             if await page.is_visible("#onetrust-accept-btn-handler", timeout=3000):
                 await page.click("#onetrust-accept-btn-handler")
                 await asyncio.sleep(1)
         except: pass
         
-        # 3. 找搜索框并输入
         search_input = None
-        for selector in ["input[name='search']", "input[type='search']", "#search-input", 
-                         "input[data-test='search-input']", "input[placeholder*='Search']",
-                         "input[placeholder*='search']", "input.search", "#header-search"]:
+        for selector in ["input[name='search']", "input[type='search']", "input[data-test='search-input']"]:
             try:
                 loc = page.locator(selector).first
                 if await loc.count() > 0 and await loc.is_visible():
                     search_input = loc
-                    print(f"  [调试] 找到搜索框: {selector}")
                     break
             except: pass
         
@@ -244,43 +248,29 @@ async def get_first_result_currys(page, keyword):
             await page.wait_for_load_state("domcontentloaded")
             await asyncio.sleep(4)
         else:
-            # 回退: URL 拼接
-            print("  [提示] 未找到搜索框，回退到 URL 拼接模式")
             search_url = f"https://www.currys.co.uk/search/{urllib.parse.quote(keyword)}"
             await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
             await asyncio.sleep(4)
         
-        # 4. 调试日志
         current_url = page.url
-        current_title = await page.title()
-        print(f"  [调试] 搜索后URL: {current_url}")
-        print(f"  [调试] 页面标题: {current_title}")
+        # 验证直接跳转
+        if "/products/" in current_url:
+            if validate_link(current_url, keyword, await page.title()):
+                return current_url
         
-        # 5. 检查是否直接跳转到了商品页
-        if "/products/" in current_url and "currys.co.uk" in current_url:
-            print(f"  -> 直接跳转到了商品页: {current_url}")
-            return current_url
-        
-        # 6. 在搜索结果中查找商品链接 (仅 currys.co.uk 域名)
-        links = await page.locator("a[href*='currys.co.uk/products/']").all()
-        if not links:
-            # 也尝试相对路径
-            links = await page.locator("a[href^='/products/']").all()
-        
-        print(f"  [调试] 找到 {len(links)} 个 Currys 商品链接")
-        
-        seen = set()
+        # 查找结果
+        links = await page.locator("a[href*='/products/']").all()
         for link_locator in links:
             href = await link_locator.get_attribute("href")
-            if href and href not in seen:
-                seen.add(href)
+            title = await link_locator.inner_text()
+            if href:
                 if not href.startswith("http"):
                     href = "https://www.currys.co.uk" + href
-                if "currys.co.uk" in href and "/search" not in href:
-                    print(f"  -> 找到潜在链接: {href}")
+                
+                if validate_link(href, keyword, title):
+                    print(f"  -> Validated link: {href}")
                     return href
         
-        print(f"  [Currys] 未在搜索结果中找到任何商品链接")
     except Exception as e:
         print(f"  [Currys搜索失败] {e}")
     return None
@@ -289,7 +279,7 @@ async def get_first_result_currys(page, keyword):
 
 def update_product_link_in_csv(product_name, new_url):
     """
-    更新 CSV 中的链接 (同步操作，因为文件IO不需要async)
+    更新 CSV 中的链接
     """
     csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "products.csv")
     if not os.path.exists(csv_path): return False
@@ -332,7 +322,6 @@ async def run_filler_async(headless=False):
         print(f"错误: 找不到 {csv_path}")
         return
 
-    # 1. 读取所有行
     rows = []
     fieldnames = []
     with open(csv_path, 'r', encoding='utf-8-sig') as f:
@@ -341,7 +330,6 @@ async def run_filler_async(headless=False):
         for row in reader:
             rows.append(row)
 
-    # 2. 检查是否有需要填充的
     to_fill_idx = []
     for i, row in enumerate(rows):
         link = row.get("Link") or row.get("链接") or row.get("url")
@@ -357,20 +345,14 @@ async def run_filler_async(headless=False):
     
     print(f"发现 {len(to_fill_idx)} 个商品缺少链接，准备开始并发搜索...")
 
-    # 3. 启动 Async Playwright
     async with async_playwright() as p:
-        browser_args = ['--disable-blink-features=AutomationControlled', '--start-maximized']
+        browser_args = ['--disable-blink-features=AutomationControlled']
         browser = await p.chromium.launch(headless=headless, args=browser_args)
-        
-        # 限制并发数
         sem = asyncio.Semaphore(3)
 
         async def process_item(idx):
             async with sem:
-                context = await browser.new_context(
-                    user_agent=USER_AGENT_STR,
-                    locale="en-US"
-                )
+                context = await browser.new_context(user_agent=USER_AGENT_STR, locale="en-US")
                 await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
                 page = await context.new_page()
                 
@@ -381,7 +363,6 @@ async def run_filler_async(headless=False):
                 platform_lower = platform_val.strip().lower()
                 
                 print(f"正在处理 [{platform_val}] {name} ...")
-                
                 new_link = None
                 target_keyword = f"{brand} {name}".strip()
                 
@@ -396,21 +377,16 @@ async def run_filler_async(headless=False):
                         new_link = await get_first_result_amazon(page, target_keyword)
                     elif "currys" in platform_lower:
                         new_link = await get_first_result_currys(page, target_keyword)
-                    else:
-                        print(f"  [跳过] 未知平台: {platform_val}")
                 except Exception as e:
                     print(f"  [任务出错] {name}: {e}")
                 
                 await context.close()
                 return idx, new_link
 
-        # 创建任务
         tasks = [process_item(i) for i in to_fill_idx]
         results = await asyncio.gather(*tasks)
-
         await browser.close()
         
-        # 4. 更新结果
         updated_count = 0
         for idx, new_link in results:
             if new_link:
@@ -419,9 +395,8 @@ async def run_filler_async(headless=False):
                 elif "链接" in row: row["链接"] = new_link
                 elif "url" in row: row["url"] = new_link
                 updated_count += 1
-                print(f"  [成功] 填充链接: {new_link}")
+                print(f"  [成功] 填充验证通过的链接: {new_link}")
 
-    # 5. 写回文件
     if updated_count > 0:
         print("正在保存更新后的 CSV ...")
         try:
@@ -436,9 +411,7 @@ async def run_filler_async(headless=False):
         print("没有新的链接被填充。")
 
 def run_filler(headless=False):
-    """入口函数"""
     asyncio.run(run_filler_async(headless))
 
 if __name__ == "__main__":
-    # Headless=False 方便调试
-    run_filler(headless=False)
+    run_filler(headless=True)
