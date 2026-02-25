@@ -87,6 +87,7 @@ def format_feishu_fields(row):
     fields["时间"] = row.get("Time")
     fields["品牌"] = row.get("Brand")
     fields["型号"] = row.get("Product Name")
+    fields["页面标题"] = row.get("Page Title")
     fields["国家"] = row.get("Country")
     fields["平台"] = row.get("Platform")
     fields["币种"] = row.get("Currency")
