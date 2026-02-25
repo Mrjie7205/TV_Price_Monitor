@@ -47,7 +47,7 @@ def main():
         with open(CSV_PRODUCTS, mode='r', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                clean_row = {k.strip(): v for k, v in row.items()}
+                clean_row = {k.strip(): v for k, v in row.items() if k is not None}
                 link = clean_row.get("Link", "").strip()
                 if link:
                     key = get_product_key(clean_row.get("Brand"), clean_row.get("Product Name"), clean_row.get("Country"), clean_row.get("Platform"))
@@ -60,7 +60,7 @@ def main():
             reader = csv.DictReader(f)
             # 通过全量遍历覆盖，确保拿到最后一条（即最新的一条）状态
             for row in reader:
-                clean_row = {k.strip(): v for k, v in row.items()}
+                clean_row = {k.strip(): v for k, v in row.items() if k is not None}
                 key = get_product_key(clean_row.get("Brand"), clean_row.get("Product Name"), clean_row.get("Country"), clean_row.get("Platform"))
                 status = clean_row.get("Status", "").strip()
                 if status:
