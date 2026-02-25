@@ -113,6 +113,23 @@ def clean_price(text):
     except: pass
     return None
 
+async def handle_currys_cloudflare(page, name=""):
+    """检测并处理 Currys 的 Cloudflare 'Bear with us' 拦截页"""
+    try:
+        # 检测特征文字或标题
+        for _ in range(3): # 最多等待 3 次，共计约 15s
+            content = await page.content()
+            title = await page.title()
+            if "Bear with us" in title or "checking your connection" in content.lower() or "Verify you are human" in content:
+                print(f"  [{name}] ⚠ 检测到 Currys 验证页 (Cloudflare)，尝试原地等待 5s...")
+                await asyncio.sleep(5)
+            else:
+                return True # 不再包含验证特征，认为已通过
+        
+        return False
+    except:
+        return True
+
 def load_products_from_csv():
     """读取商品列表"""
     products = []
@@ -630,6 +647,10 @@ async def process_product(sem, browser, item, historical_prices):
                                 
                                 timeout_val = 40000 if attempt == 0 else 60000
                                 await page.goto(url, wait_until='domcontentloaded', timeout=timeout_val)
+                                
+                                # === Currys 拦截检测 ===
+                                if "currys" in url.lower():
+                                    await handle_currys_cloudflare(page, name)
                             except Exception as e:
                                 print(f"  [{name}] 导航超时/错误 ({attempt+1}): {e}")
                                 if attempt < MAX_RETRIES - 1: continue

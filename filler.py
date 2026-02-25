@@ -53,6 +53,21 @@ def validate_link(link, keyword, page_title=""):
 
     return True
 
+async def handle_currys_cloudflare(page, keyword=""):
+    """检测并处理 Currys 的 Cloudflare 'Bear with us' 拦截页"""
+    try:
+        for _ in range(3):
+            content = await page.content()
+            title = await page.title()
+            if "Bear with us" in title or "checking your connection" in content.lower() or "Verify you are human" in content:
+                print(f"  [{keyword}] ⚠ 检测到 Currys 验证页，等待 5s...")
+                await asyncio.sleep(5)
+            else:
+                return True
+        return False
+    except:
+        return True
+
 # ================= 搜索函数 (Async) =================
 
 async def get_first_result_darty(page, keyword):
@@ -243,7 +258,8 @@ async def get_first_result_currys(page, keyword):
     print(f"  正在 Currys 搜索: {keyword} ...")
     try:
         await page.goto("https://www.currys.co.uk", wait_until='domcontentloaded', timeout=30000)
-        await asyncio.sleep(random.uniform(2, 4))
+        await handle_currys_cloudflare(page, keyword)
+        await asyncio.sleep(random.uniform(1, 2))
         
         try:
             if await page.is_visible("#onetrust-accept-btn-handler", timeout=3000):
@@ -272,7 +288,8 @@ async def get_first_result_currys(page, keyword):
         else:
             search_url = f"https://www.currys.co.uk/search/{urllib.parse.quote(keyword)}"
             await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
-            await asyncio.sleep(4)
+            await handle_currys_cloudflare(page, keyword)
+            await asyncio.sleep(3)
         
         current_url = page.url
         # 验证直接跳转
