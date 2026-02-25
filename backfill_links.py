@@ -120,7 +120,7 @@ def main():
                         target_link = local_links[fs_key]
                         records_to_update.append({
                             "record_id": record_id,
-                            "fields": {"链接": target_link},
+                            "fields": {"链接": {"link": target_link}},
                             "debug_info": f"{brand}|{model}"
                         })
                 
