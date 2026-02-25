@@ -32,6 +32,14 @@ jobs:
           HEADLESS_MODE: "true" # 确保脚本以 Headless 运行
         run: python monitor.py
 
+      - name: Sync Data to Feishu
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
+        run: python sync_feishu.py
+
       - name: Upload Debug Screenshots
         if: always()
         uses: actions/upload-artifact@v4
