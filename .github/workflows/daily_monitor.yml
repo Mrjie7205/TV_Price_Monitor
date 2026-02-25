@@ -40,6 +40,14 @@ jobs:
           HEADLESS_MODE: "true" # 确保脚本以 Headless 运行
         run: python monitor.py
 
+      - name: Backfill Links to Feishu
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_PRODUCT_TABLE_ID: ${{ secrets.FEISHU_PRODUCT_TABLE_ID }}
+        run: python backfill_links.py
+
       - name: Sync Data to Feishu
         env:
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
