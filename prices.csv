@@ -1,4 +1,4 @@
-﻿Date,Time,Brand,Product Name,Country,Platform,Price,Currency,Page Title,Status
+﻿Date,Time,Brand,Product Name,Country,Platform,Price,Currency,Page Title,Status,Price_Trend
 2026-02-12,15:46:41,TCL,98X11K,FR,Boulanger,3999.0,EUR,TV Mini Led TCL 98X11K 2025-98 pouces (248cm) | Boulanger,Success
 2026-02-12,15:46:41,TCL,85X11K,FR,Fnac,2499.0,EUR,TV Tcl QD-Mini LED 85X11K 215 cm 2025 - TV LED/LCD - Achat & prix | fnac,Success
 2026-02-12,15:46:41,TCL,65C9K,FR,Boulanger,1199.0,EUR,TV Mini Led TCL 65C9K 2025-65 pouces (164cm) | Boulanger,Success
@@ -1118,3 +1118,4 @@
 2026-02-25,07:50:53,HISENSE,65U7Q Pro,UK,Currys,799.0,GBP,"Buy HISENSE U7Q PRO 55"" Mini LED 4K 165Hz Smart AI TV with Freely - 55U7QTUK PRO | Currys",Success,持平
 2026-02-25,07:50:53,HISENSE,65A6Q,UK,Currys,399.0,GBP,"Buy HISENSE A6Q 65"" LED 4K HDR Smart TV with Freely - 65A6QTUK | Currys",Success,持平
 2026-02-25,07:50:53,HISENSE,55U7Q Pro,UK,Currys,799.0,GBP,"Buy HISENSE U7Q PRO 55"" Mini LED 4K 165Hz Smart AI TV with Freely - 55U7QTUK PRO | Currys",Success,持平
+
