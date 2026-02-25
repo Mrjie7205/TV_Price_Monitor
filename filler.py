@@ -28,21 +28,26 @@ def validate_link(link, keyword, page_title=""):
     link_lower = link.lower()
     title_lower = page_title.lower() if page_title else ""
     
-    # 核心验证逻辑：至少要包含品牌或型号中的一个“硬性”识别词
-    # 比如 "Samsung 65Q7F", 如果链接或标题里完全没出现 "Samsung" 也没出现 "65Q7F", 就认为不匹配
+    # 核心验证逻辑
     matches = 0
-    for p in parts:
+    model_matches = 0
+    for i, p in enumerate(parts):
         if p in link_lower or p in title_lower:
             matches += 1
+            if i > 0: # 认为是型号词汇
+                model_matches += 1
             
-    # 如果匹配到的关键词部分占比太低，认为有误搜风险
-    # 特别是针对长关键词，如果一个识别度高的词都没对上，直接排除
+    # 如果一个词都没对上，直接排除
     if matches == 0:
         return False
     
-    # 针对三星这类品牌，如果搜出来了 DJI 这种完全不相干的品牌关键字，直接拍死
-    anti_keywords = ["dji", "drone", "mavic", "fly-more"]
-    if any(ak in keyword.lower() for ak in ["samsung", "tcl", "hisense", "tv"]):
+    # 强化匹配逻辑：如果关键词包含多部分（如品牌+型号），必须命中至少一个型号词
+    if len(parts) >= 2 and model_matches == 0:
+        return False
+    
+    # 针对电视等产品，如果搜出来了不相干的品类（特别是白电、手机、无人机），直接过滤
+    anti_keywords = ["dji", "drone", "mavic", "fly-more", "lave-linge", "washing machine", "frigo", "réfrigérateur", "refrigerator", "four", "oven", "aspirateur", "vacuum", "micro-ondes", "smartphone", "galaxy"]
+    if any(ak in keyword.lower() for ak in ["samsung", "tcl", "hisense", "tv", "monitor", "écran"]):
         if any(ak in link_lower or ak in title_lower for ak in anti_keywords):
             return False
 
@@ -106,9 +111,23 @@ async def get_first_result_boulanger(page, keyword):
             await asyncio.sleep(0.5)
             await page.keyboard.type(keyword, delay=100) 
             await asyncio.sleep(0.5)
+            
+            # 记录当前 URL 以确认跳转
+            old_url = page.url
             await page.keyboard.press("Enter")
-            await page.wait_for_load_state("domcontentloaded")
-            await asyncio.sleep(4)
+            
+            # 强化等待：确保进入真实搜索页或直接进入产品详情
+            try:
+                # 等待 URL 变化或主容器出现，最多等待 10s
+                await page.wait_for_function(
+                    f"url => url !== '{old_url}' && (url.includes('resultats') || url.includes('/ref/'))",
+                    old_url, timeout=10000
+                )
+            except:
+                # 如果没能成功检测到 URL 变化，回退到普通等待
+                await page.wait_for_load_state("domcontentloaded")
+            
+            await asyncio.sleep(2)
         else:
             search_url = f"https://www.boulanger.com/resultats?tr={urllib.parse.quote(keyword)}"
             await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
@@ -122,9 +141,12 @@ async def get_first_result_boulanger(page, keyword):
             if validate_link(current_url, keyword, current_title):
                 return current_url
 
-        # 提取结果列表
-        links = await page.locator("a[href*='/ref/']").all()
+        # 提取结果列表，强制过滤可见元素，防止抓到建议层的隐藏内容
+        links = await page.locator("a[href*='/ref/']:visible").all()
         for link_locator in links:
+            if not await link_locator.is_visible():
+                continue
+                
             href = await link_locator.get_attribute("href")
             if href:
                 if not href.startswith("http"):
