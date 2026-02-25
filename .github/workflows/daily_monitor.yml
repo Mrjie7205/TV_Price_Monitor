@@ -27,6 +27,14 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium # 安装浏览器内核
 
+      - name: Pull New Products from Feishu
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_PRODUCT_TABLE_ID: ${{ secrets.FEISHU_PRODUCT_TABLE_ID }}
+        run: python pull_products.py
+
       - name: Run Monitor Script
         env:
           HEADLESS_MODE: "true" # 确保脚本以 Headless 运行
