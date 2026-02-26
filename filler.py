@@ -22,7 +22,7 @@ def validate_link(link, keyword, page_title=""):
     if not link: return False
     
     # 将关键词拆分为部分，过滤短词
-    parts = [p.strip().lower() for p in keyword.split() if len(p.strip()) > 2]
+    parts = [p.strip().lower() for p in keyword.split() if len(p.strip()) >= 2]
     if not parts: return True # 如果没法拆分出有效词，保守处理
 
     link_lower = link.lower()
@@ -39,16 +39,19 @@ def validate_link(link, keyword, page_title=""):
             
     # 如果一个词都没对上，直接排除
     if matches == 0:
+        print(f"    [链接被拒] 搜索: {keyword} | 找到标题: {page_title} | 原因: 关键词全军覆没")
         return False
     
     # 强化匹配逻辑：如果关键词包含多部分（如品牌+型号），必须命中至少一个型号词
     if len(parts) >= 2 and model_matches == 0:
+        print(f"    [链接被拒] 搜索: {keyword} | 找到标题: {page_title} | 原因: 仅匹配到品牌，未匹配到核心型号")
         return False
     
     # 针对电视等产品，如果搜出来了不相干的品类（特别是白电、手机、无人机），直接过滤
     anti_keywords = ["dji", "drone", "mavic", "fly-more", "lave-linge", "washing machine", "frigo", "réfrigérateur", "refrigerator", "four", "oven", "aspirateur", "vacuum", "micro-ondes", "smartphone", "galaxy"]
     if any(ak in keyword.lower() for ak in ["samsung", "tcl", "hisense", "tv", "monitor", "écran"]):
         if any(ak in link_lower or ak in title_lower for ak in anti_keywords):
+            print(f"    [链接被拒] 搜索: {keyword} | 找到标题: {page_title} | 原因: 触碰家电黑名单")
             return False
 
     return True
