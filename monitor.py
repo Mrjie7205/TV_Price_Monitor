@@ -448,7 +448,16 @@ async def get_amazon_price(page):
 
 async def get_currys_price(page):
     """抓取 Currys.co.uk 价格"""
-    # 策略 1: data-product='price' (Currys 经典属性)
+    # 策略 1: span.value[content] (Currys 较新版准确取值)
+    try:
+        el = page.locator("span.value[content]").first
+        if await el.count() > 0:
+            price_val = await el.get_attribute("content")
+            if price_val:
+                return float(price_val), "GBP"
+    except: pass
+
+    # 策略 2: data-product='price' (Currys 经典属性)
     try:
         el = page.locator("strong[data-product='price']").first
         if await el.count() > 0:
@@ -457,7 +466,7 @@ async def get_currys_price(page):
             if result: return result
     except: pass
     
-    # 策略 2: [data-test='current-price'] 或类似 data-test 属性
+    # 策略 3: [data-test='current-price'] 或类似 data-test 属性
     for sel in ["[data-test='current-price']", "[data-test='product-price']"]:
         try:
             el = page.locator(sel).first
@@ -467,13 +476,14 @@ async def get_currys_price(page):
                 if result: return result
         except: pass
     
-    # 策略 3: 通用价格 class
-    for sel in [".prices_kgK", ".price", ".product-price", "span[class*='price']", "div[class*='price']"]:
+    # 策略 4: 通用价格 class (带额外噪声过滤)
+    for sel in [".prices_kgK", ".price", ".product-price", "span[class*='price']", "div[class*='price']", "span.value"]:
         try:
             els = await page.locator(sel).all()
             for el in els:
                 text = await el.text_content()
-                if text and "£" in text:
+                # 过滤掉非商品当前价格的干扰项，例如 "Save £900.00" 或者 "Was £2,599.00"
+                if text and "£" in text and "save" not in text.lower() and "was" not in text.lower():
                     result = clean_price(text)
                     if result: return result
         except: pass
@@ -728,7 +738,7 @@ async def process_product(sem, browser, item, historical_prices):
                             try: await page.wait_for_selector(".price__amount, .price", timeout=5000)
                             except: pass
                         elif "currys" in platform_lower:
-                            try: await page.wait_for_selector("strong[data-product='price'], .price, [data-test='current-price']", timeout=5000)
+                            try: await page.wait_for_selector("strong[data-product='price'], .price, [data-test='current-price'], span.value", timeout=5000)
                             except: pass
 
                         # 抓取价格
