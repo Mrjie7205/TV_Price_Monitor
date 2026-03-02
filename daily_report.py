@@ -235,11 +235,12 @@ def append_to_feishu_bitable(report_dict):
     price_report = price_report.replace('\u0000', '')
     industry_news = industry_news.replace('\u0000', '')
 
-    today_str = datetime.now(BJ_TZ).strftime("%Y-%m-%d")
+    # 飞书多维表格 Date 字段目前要求毫秒级时间戳，不能输入格式化的字符串
+    today_timestamp = int(datetime.now(BJ_TZ).timestamp() * 1000)
 
     payload = {
         "fields": {
-            "日期": today_str,
+            "日期": today_timestamp,
             "价格日报": price_report,
             "行业简讯": industry_news
         }
