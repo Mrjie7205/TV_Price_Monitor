@@ -33,9 +33,6 @@ jobs:
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
           FEISHU_PRODUCT_TABLE_ID: ${{ secrets.FEISHU_PRODUCT_TABLE_ID }}
-          # 👇 必须加上下面这两行，把保险柜里的密码递给 Python
-          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
-          FEISHU_REPORT_TABLE_ID: ${{ secrets.FEISHU_REPORT_TABLE_ID }}
         run: python pull_products.py
 
       - name: Run Monitor Script
@@ -66,6 +63,9 @@ jobs:
           FEISHU_DOC_ID: ${{ secrets.FEISHU_DOC_ID }}
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          # 👇 必须加上下面这两行，把保险柜里的密码递给 Python
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_REPORT_TABLE_ID: ${{ secrets.FEISHU_REPORT_TABLE_ID }}
         run: python daily_report.py
 
       - name: Upload Debug Screenshots
