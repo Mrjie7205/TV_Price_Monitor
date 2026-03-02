@@ -171,11 +171,22 @@ def append_to_feishu_docx(content):
     """
     利用 Docx API 将报告追加到指定飞书文档的最末尾
     """
+    import json
+    
     print(">>> [同步飞书] 准备向飞书文档写入最终报告...")
     doc_id = os.environ.get("FEISHU_DOC_ID")
     if not doc_id:
         print(">>> [同步飞书] ⚠️ 警告：未发现 FEISHU_DOC_ID 环境变量，已跳过文档写入环节。")
         return
+        
+    # 确保 doc_id 前后没有空格
+    doc_id = doc_id.strip()
+
+    # 安全检查与过滤
+    if not content or not content.strip():
+        content = "今日分析内容为空"
+    else:
+        content = content.replace('\u0000', '')
 
     print(">>> [同步飞书] 正在尝试获取飞书应用凭证 Tenant Access Token...")
     token = get_tenant_access_token()
@@ -193,8 +204,8 @@ def append_to_feishu_docx(content):
     today_title = f"{datetime.now(BJ_TZ).strftime('%Y-%m-%d')} 市场监控日报"
     print(f">>> [同步飞书] 今日要写入的文档 Title 为: {today_title}")
 
+    # 省略了 "index": -1，直接向末尾追加
     payload = {
-        "index": -1,
         "children": [
             {
                 "block_type": 4, 
@@ -217,12 +228,21 @@ def append_to_feishu_docx(content):
 
     try:
         resp = requests.post(url, headers=headers, json=payload)
-        resp.raise_for_status()
+        
+        # 针对 400/500 等异常状态码全面拦截，不粗暴抛出报错，全量打印排查信息
+        if resp.status_code != 200:
+            print(f">>> [同步飞书] ❌ HTTP 请求失败，Status Code: {resp.status_code}")
+            print(f"--- 飞书 API 报错 Response (resp.text) --- \n{resp.text}\n------------------------------------------")
+            print(f"--- 发送的 Payload 数据 --- \n{json.dumps(payload, ensure_ascii=False, indent=2)}\n-------------------------")
+            return
+            
         result = resp.json()
         if result.get("code") == 0:
             print(">>> [同步飞书] ✅ 成功：大模型商业日报已被推送并追加至指定飞书文档最尾部！")
         else:
-            print(f">>> [同步飞书] ❌ 失败：写入遇到错误: {result.get('msg')} ({result.get('code')})")
+            print(f">>> [同步飞书] ❌ 失败：写入遇到逻辑错误 ({result.get('code')}): {result.get('msg')}")
+            print(f"--- 飞书 API 报错 Response 结构 --- \n{resp.text}\n-----------------------------------")
+            print(f"--- 发送的 Payload 数据 --- \n{json.dumps(payload, ensure_ascii=False, indent=2)}\n-------------------------")
     except Exception as e:
         print(f">>> [同步飞书] ❌ 网络接口请求异常：{e}")
 
