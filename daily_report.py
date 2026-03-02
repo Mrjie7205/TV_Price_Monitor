@@ -1,11 +1,14 @@
 import os
 import csv
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import requests
 from tavily import TavilyClient
 from openai import OpenAI
 
 from sync_feishu import get_tenant_access_token
+
+# ====== 设定东八区时间，以防 GitHub Actions 默认按 UTC 产生日历差 ======
+BJ_TZ = timezone(timedelta(hours=8))
 
 def get_internal_data(csv_file="prices.csv"):
     """
@@ -15,13 +18,16 @@ def get_internal_data(csv_file="prices.csv"):
     notable_price_changes = []
     status_mutations = []
 
+    print(f">>> [内部数据] 正在检查 CSV 文件: {csv_file}")
     if not os.path.exists(csv_file):
+         print(">>> [内部数据] 警告：CSV 文件不存在。")
          return "CSV 文件不存在", []
 
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    product_history = {}
+    # 使用东八区时间
+    today_str = datetime.now(BJ_TZ).strftime("%Y-%m-%d")
+    print(f">>> [内部数据] 获取到当前东八区日期为: {today_str}")
     
-    # 按照已有格式定义列名
+    product_history = {}
     fieldnames = ["Date", "Time", "Brand", "Product Name", "Country", "Platform", "Price", "Currency", "Page Title", "Status", "Price_Trend"]
     
     try:
@@ -35,8 +41,10 @@ def get_internal_data(csv_file="prices.csv"):
                  if key not in product_history:
                      product_history[key] = []
                  product_history[key].append(row)
+                 
+        print(f">>> [内部数据] 成功读取 CSV 文件，共 {sum(len(v) for v in product_history.values())} 条历史记录。")
     except Exception as e:
-        print(f"读取 CSV 出错: {e}")
+        print(f">>> [内部数据] 读取 CSV 出错: {e}")
         return notable_price_changes, status_mutations
 
     for key, history in product_history.items():
@@ -68,6 +76,7 @@ def get_internal_data(csv_file="prices.csv"):
                          "details": latest_today
                      })
 
+    print(f">>> [内部数据] 分析完毕：发现近期显著调价单品 {len(notable_price_changes)} 个，异常状态突变单品 {len(status_mutations)} 个。")
     return notable_price_changes, status_mutations
 
 
@@ -75,11 +84,14 @@ def get_external_news():
     """
     抓取过去 24 小时的欧洲电视与家电行业新闻
     """
+    print(">>> [外部资讯] 准备抓取外部行业新闻...")
     api_key = os.environ.get("TAVILY_API_KEY")
     if not api_key:
+        print(">>> [外部资讯] ❌ 未配置 TAVILY_API_KEY，跳过新闻抓取。")
         return "未配置 TAVILY_API_KEY，无法获取外部新闻。"
         
     try:
+        print(">>> [外部资讯] 正在建立 TavilyClient 连接并发送查询...")
         client = TavilyClient(api_key=api_key)
         query = "过去24小时欧洲电视零售市场动态、电视产品上新与退市、显示面板供应链变动，以及欧洲家电相关的法律法规变化"
         
@@ -88,11 +100,14 @@ def get_external_news():
         results = response.get("results", [])
         
         if not results:
+            print(">>> [外部资讯] ⚠️ 搜索执行成功，但未返回最新相关结果。")
             return "经过搜索，未抓取到任何与家电或面板相关的新闻信息。"
         
+        print(f">>> [外部资讯] ✅ 成功拉取到 {len(results)} 条相关新闻信息。")
         snippets = [f"- 标题：{r.get('title')}\n  摘要：{r.get('content')}" for r in results]
         return "\n".join(snippets)
     except Exception as e:
+        print(f">>> [外部资讯] ❌ 新闻抓取发生异常：{e}")
         return f"新闻抓取过程发生异常：{e}"
 
 
@@ -100,17 +115,20 @@ def generate_report(price_data, status_data, news_info):
     """
     调用大模型（DeepSeek）进行核心商业视角的综合分析与生成，输出纯文本
     """
+    print(">>> [AI分析] 准备调用大模型引擎生成分析报告...")
     api_key = os.environ.get("DEEPSEEK_API_KEY")
     # 为了保证健壮性，若无 OpenAI Key，我们直接返回组装的基础文本
     if not api_key:
+        print(">>> [AI分析] ⚠️ 未配置 DEEPSEEK_API_KEY，采取 Fallback 返回基础格式文本。")
         fallback_msg = "未配置 DEEPSEEK_API_KEY，返回基础版简报。\n\n模块一：【价格日报】\n"
         fallback_msg += price_data + "\n" + status_data + "\n\n模块二：【行业简讯】\n" + news_info
         return fallback_msg
 
     try:
+        print(">>> [AI分析] 正在建立大模型客户端请求...")
         client = OpenAI(
             api_key=api_key,
-            base_url="https://api.deepseek.com/v1" # 默认指向 DeepSeek 接口，可随时变更为 OpenAI 兼容接口
+            base_url="https://api.deepseek.com/v1" 
         )
         
         system_prompt = (
@@ -131,6 +149,7 @@ def generate_report(price_data, status_data, news_info):
              f"【外部新闻】\n{news_info}"
         )
         
+        print(">>> [AI分析] 提示词已组装完毕，等待大模型流返回 (可能需要数秒至十几秒)...")
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
@@ -141,25 +160,27 @@ def generate_report(price_data, status_data, news_info):
             max_tokens=1500
         )
         
+        print(">>> [AI分析] ✅ 成功接收大模型返回内容！")
         return response.choices[0].message.content.strip()
     except Exception as e:
+        print(f">>> [AI分析] ❌ 请求大模型失败：{e}")
         return f"大模型生成日报失败，系统级警告：{e}\n\n[原始数据参考]\n{price_data}\n{news_info}"
 
 
 def append_to_feishu_docx(content):
     """
     利用 Docx API 将报告追加到指定飞书文档的最末尾
-    注意这并不是表格 bitable 追加，而是向文本文档中增加 Block
     """
+    print(">>> [同步飞书] 准备向飞书文档写入最终报告...")
     doc_id = os.environ.get("FEISHU_DOC_ID")
     if not doc_id:
-        print("警告：未配置 FEISHU_DOC_ID 环境变量，将跳过飞书文档回写。")
+        print(">>> [同步飞书] ⚠️ 警告：未发现 FEISHU_DOC_ID 环境变量，已跳过文档写入环节。")
         return
 
-    # 从现有的 sync_feishu 获取合法的内部租户级 token
+    print(">>> [同步飞书] 正在尝试获取飞书应用凭证 Tenant Access Token...")
     token = get_tenant_access_token()
     if not token:
-        print("错误：无法获取飞书 Tenant Access Token，回写中止。")
+        print(">>> [同步飞书] ❌ 获取凭证失败 (请检查 FEISHU_APP_ID/SECRET)，写入已中止。")
         return
 
     url = f"https://open.feishu.cn/open-apis/docx/v1/documents/{doc_id}/blocks/{doc_id}/children"
@@ -168,27 +189,27 @@ def append_to_feishu_docx(content):
         "Content-Type": "application/json; charset=utf-8"
     }
 
-    # 当天的日期标题
-    today_title = f"{datetime.now().strftime('%Y-%m-%d')} 市场监控日报"
+    # 当天的日期标题，确保采用东八区日期
+    today_title = f"{datetime.now(BJ_TZ).strftime('%Y-%m-%d')} 市场监控日报"
+    print(f">>> [同步飞书] 今日要写入的文档 Title 为: {today_title}")
 
-    # 构建三个 Block 的 JSON 数据模型
     payload = {
-        "index": -1, # 在文档的末尾追加
+        "index": -1,
         "children": [
             {
-                "block_type": 4, # Heading 2
+                "block_type": 4, 
                 "heading2": {
                     "elements": [{"text_run": {"content": today_title}}]
                 }
             },
             {
-                "block_type": 2, # 普通文本 Text Block
+                "block_type": 2, 
                 "text": {
                     "elements": [{"text_run": {"content": content}}]
                 }
             },
             {
-                "block_type": 22, # 分割线 Divider
+                "block_type": 22, 
                 "divider": {}
             }
         ]
@@ -199,21 +220,21 @@ def append_to_feishu_docx(content):
         resp.raise_for_status()
         result = resp.json()
         if result.get("code") == 0:
-            print(">>> ✅ 成功：大模型商业日报已被追加至指定飞书文档！")
+            print(">>> [同步飞书] ✅ 成功：大模型商业日报已被推送并追加至指定飞书文档最尾部！")
         else:
-            print(f">>> ❌ 失败：写入飞书文档遇到错误: {result.get('msg')} ({result.get('code')})")
+            print(f">>> [同步飞书] ❌ 失败：写入遇到错误: {result.get('msg')} ({result.get('code')})")
     except Exception as e:
-        print(f">>> ❌ 网络接口请求异常：{e}")
+        print(f">>> [同步飞书] ❌ 网络接口请求异常：{e}")
 
 
 def main():
-    print("--- 开始生成每日市场概览报告 ---")
+    print("==============================================")
+    print(f"--- 开启定时任务节点：生成每日市场概览报告 ---")
+    print(f"--- 触发日期：{datetime.now(BJ_TZ).strftime('%Y-%m-%d %H:%M:%S (UTC+8)')} ---")
+    print("==============================================\n")
     
-    # 步骤一：提取清洗内部运营数据
-    print(">>> 正在准备内部数据 (处理 prices.csv) ...")
     price_changes, status_mutations = get_internal_data("prices.csv")
     
-    # 数据友好格式化
     price_info = "今日内部监控的 SKU 无显著降价或涨价数据记录。"
     if price_changes:
          price_info = "今日发生价格变动的 SKU 列表：\n" + "\n".join(
@@ -230,23 +251,17 @@ def main():
               for m in status_mutations]
          )
 
-    # 步骤二：Tavily 外网宏观新闻捕捉
-    print(">>> 正在使用 Tavily 获取外部行业资讯 ...")
     news_info = get_external_news()
-
-    # 步骤三：DeepSeek 资深视角分析与综合整理
-    print(">>> 正在请求大语言模型，生成资深市场视角行业报告 ...")
     report_text = generate_report(price_info, status_info, news_info)
     
-    print("\n----------------- 报告预览 -----------------")
-    print(report_text[:300] + " ... (隐藏长文)\n" if len(report_text) > 300 else report_text)
-    print("--------------------------------------------\n")
+    print("\n----------------- 报告内容预览 -----------------")
+    preview = report_text[:300] + " ... (已折叠剩余部分)\n" if len(report_text) > 300 else report_text
+    print(preview)
+    print("------------------------------------------------\n")
 
-    # 步骤四：回推飞书进行沉淀
-    print(">>> 准备推送结果至飞书云文档...")
     append_to_feishu_docx(report_text)
     
-    print("--- 今日报告闭环流转完毕 ---")
+    print("\n--- 今日报告闭环流转完毕，任务退出！ ---")
 
 if __name__ == "__main__":
     main()

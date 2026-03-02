@@ -56,6 +56,15 @@ jobs:
           FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
         run: python sync_feishu.py
 
+      - name: Generate Daily Report
+        env:
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          FEISHU_DOC_ID: ${{ secrets.FEISHU_DOC_ID }}
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+        run: python daily_report.py
+
       - name: Upload Debug Screenshots
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,2 +1,5 @@
 playwright
 pytest-playwright
+tavily-python
+openai
+requests
