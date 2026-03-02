@@ -172,6 +172,7 @@ def append_to_feishu_docx(content):
     利用 Docx API 将报告追加到指定飞书文档的最末尾
     """
     import json
+    import re
     
     print(">>> [同步飞书] 准备向飞书文档写入最终报告...")
     doc_id = os.environ.get("FEISHU_DOC_ID")
@@ -179,8 +180,17 @@ def append_to_feishu_docx(content):
         print(">>> [同步飞书] ⚠️ 警告：未发现 FEISHU_DOC_ID 环境变量，已跳过文档写入环节。")
         return
         
-    # 确保 doc_id 前后没有空格
+    # 智能提取真实 ID，过滤首尾空格
     doc_id = doc_id.strip()
+    if 'http' in doc_id or '/' in doc_id:
+        # 过滤掉 ID 中可能包含的 URL 参数
+        doc_id = doc_id.split('?')[0]
+        # 精准提取出 doxcn 开头的那段纯粹的 Document ID
+        match = re.search(r'(doxcn[a-zA-Z0-9]+)', doc_id)
+        if match:
+            doc_id = match.group(1)
+        else:
+            doc_id = doc_id.split('/')[-1]
 
     # 安全检查与过滤
     if not content or not content.strip():
@@ -193,6 +203,9 @@ def append_to_feishu_docx(content):
     if not token:
         print(">>> [同步飞书] ❌ 获取凭证失败 (请检查 FEISHU_APP_ID/SECRET)，写入已中止。")
         return
+
+    # 安全调试日志：防止输出完整的 doc_id
+    print(f">>> [Debug] 最终解析出的 Doc ID 长度为: {len(doc_id)}，前 5 位为: {doc_id[:5]}...")
 
     url = f"https://open.feishu.cn/open-apis/docx/v1/documents/{doc_id}/blocks/{doc_id}/children"
     headers = {
@@ -232,6 +245,9 @@ def append_to_feishu_docx(content):
         # 针对 400/500 等异常状态码全面拦截，不粗暴抛出报错，全量打印排查信息
         if resp.status_code != 200:
             print(f">>> [同步飞书] ❌ HTTP 请求失败，Status Code: {resp.status_code}")
+            # 若状态码是 404，特别增加中文提示
+            if resp.status_code == 404:
+                print(">>> [同步飞书] ⚠️ 404 错误提示：请核对飞书文档是否为新版文档（网址含 docx），旧版文档（网址含 docs）不支持此 API；同时请核对 Secret 中的 ID 是否正确。")
             print(f"--- 飞书 API 报错 Response (resp.text) --- \n{resp.text}\n------------------------------------------")
             print(f"--- 发送的 Payload 数据 --- \n{json.dumps(payload, ensure_ascii=False, indent=2)}\n-------------------------")
             return
