@@ -113,16 +113,18 @@ def get_external_news():
 
 def generate_report(price_data, status_data, news_info):
     """
-    调用大模型（DeepSeek）进行核心商业视角的综合分析与生成，输出纯文本
+    调用大模型（DeepSeek）进行核心商业视角的综合分析与生成，输出 JSON 结构
     """
+    import json
     print(">>> [AI分析] 准备调用大模型引擎生成分析报告...")
     api_key = os.environ.get("DEEPSEEK_API_KEY")
-    # 为了保证健壮性，若无 OpenAI Key，我们直接返回组装的基础文本
+    # 为了保证健壮性，若无 OpenAI Key，我们直接返回组装的基础字典
     if not api_key:
-        print(">>> [AI分析] ⚠️ 未配置 DEEPSEEK_API_KEY，采取 Fallback 返回基础格式文本。")
-        fallback_msg = "未配置 DEEPSEEK_API_KEY，返回基础版简报。\n\n模块一：【价格日报】\n"
-        fallback_msg += price_data + "\n" + status_data + "\n\n模块二：【行业简讯】\n" + news_info
-        return fallback_msg
+        print(">>> [AI分析] ⚠️ 未配置 DEEPSEEK_API_KEY，采取 Fallback 返回基础格式数据字典。")
+        return {
+            "price_report": f"{price_data}\n{status_data}",
+            "industry_news": news_info
+        }
 
     try:
         print(">>> [AI分析] 正在建立大模型客户端请求...")
@@ -139,8 +141,12 @@ def generate_report(price_data, status_data, news_info):
             "（例如：为黑五或特定节日预热、生命周期末端清库策略、汇率剧烈波动、上游面板涨跌影响等）。若我提供给你的内部数据没有显著变化，请直接用精简的一句话概括为：“今日大盘稳定，无显著价格/库存异动”。\n\n"
             "模块二：【行业简讯】。请梳理提供的外部Tavily内容，重点提炼欧洲区域的产品上新、面板行业趋势或相关的法律法规变更。\n\n"
             "【⚠️ 致命限制要求】\n"
-            "请直接输出纯文本。绝对禁止使用任何 Markdown 语法标记（不可使用 * 、 # 、 ** 、 > 等任何修饰符）。"
-            "你的输出必须是干净平铺的文本。所有的段落区隔、强调、列表、标题等，仅能通过纯文本的中文标号和系统自带的回车断行实现。"
+            "你必须严格以合法的 JSON 格式输出结果。绝对禁止使用任何 Markdown 代码块包裹（不要输出 ```json 或 ```）。\n"
+            "输出的 JSON 结构必须且仅包含以下两个字段：\n"
+            "{\n"
+            '  "price_report": "生成的价格日报内容...",\n'
+            '  "industry_news": "生成的行业简讯内容..."\n'
+            "}"
         )
         
         user_prompt = (
@@ -150,53 +156,64 @@ def generate_report(price_data, status_data, news_info):
         )
         
         print(">>> [AI分析] 提示词已组装完毕，等待大模型流返回 (可能需要数秒至十几秒)...")
+        # 如果模型有 json_object 模式则开启，兼容性最好
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
+            response_format={"type": "json_object"},
             temperature=0.7,
             max_tokens=1500
         )
         
         print(">>> [AI分析] ✅ 成功接收大模型返回内容！")
-        return response.choices[0].message.content.strip()
+        content = response.choices[0].message.content.strip()
+        
+        # 针对如果不小心带有代码块时的剔除逻辑
+        if content.startswith("```json"):
+            content = content[7:]
+        elif content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+            
+        return json.loads(content)
+        
+    except json.JSONDecodeError as je:
+        print(f">>> [AI分析] ❌ JSON 解析异常：{je}\n原始大模型返回：{content}")
+        # 返回部分可用信息
+        return {
+            "price_report": "⚠️ 大模型解析异常，返回非合法 JSON",
+            "industry_news": f"【原始数据兜底】\n{news_info}\n【大模型原始返回】\n{content}"
+        }
     except Exception as e:
         print(f">>> [AI分析] ❌ 请求大模型失败：{e}")
-        return f"大模型生成日报失败，系统级警告：{e}\n\n[原始数据参考]\n{price_data}\n{news_info}"
+        return {
+            "price_report": f"请求大模型失败，系统警告：{e}\n\n[原始价格摘要]\n{price_data}",
+            "industry_news": f"[原始新闻摘要]\n{news_info}"
+        }
 
 
-def append_to_feishu_docx(content):
+def append_to_feishu_bitable(report_dict):
     """
-    利用 Docx API 将报告追加到指定飞书文档的最末尾
+    将生成的报告字典写入飞书多维表格 (Bitable) 中
     """
     import json
-    import re
+    import os
     
-    print(">>> [同步飞书] 准备向飞书文档写入最终报告...")
-    doc_id = os.environ.get("FEISHU_DOC_ID")
-    if not doc_id:
-        print(">>> [同步飞书] ⚠️ 警告：未发现 FEISHU_DOC_ID 环境变量，已跳过文档写入环节。")
+    print(">>> [同步飞书] 准备向飞书 Bitable 写入最终报告...")
+    app_token = os.environ.get("FEISHU_APP_TOKEN")
+    table_id = os.environ.get("FEISHU_REPORT_TABLE_ID")
+    
+    if not app_token or not table_id:
+        print(">>> [同步飞书] ⚠️ 警告：未发现 FEISHU_APP_TOKEN 或 FEISHU_REPORT_TABLE_ID 环境变量，已跳过数据写入环节。")
         return
         
-    # 智能提取真实 ID，过滤首尾空格
-    doc_id = doc_id.strip()
-    if 'http' in doc_id or '/' in doc_id:
-        # 过滤掉 ID 中可能包含的 URL 参数
-        doc_id = doc_id.split('?')[0]
-        # 精准提取出 doxcn 开头的那段纯粹的 Document ID
-        match = re.search(r'(doxcn[a-zA-Z0-9]+)', doc_id)
-        if match:
-            doc_id = match.group(1)
-        else:
-            doc_id = doc_id.split('/')[-1]
-
-    # 安全检查与过滤
-    if not content or not content.strip():
-        content = "今日分析内容为空"
-    else:
-        content = content.replace('\u0000', '')
+    app_token = app_token.strip()
+    table_id = table_id.strip()
 
     print(">>> [同步飞书] 正在尝试获取飞书应用凭证 Tenant Access Token...")
     token = get_tenant_access_token()
@@ -204,39 +221,28 @@ def append_to_feishu_docx(content):
         print(">>> [同步飞书] ❌ 获取凭证失败 (请检查 FEISHU_APP_ID/SECRET)，写入已中止。")
         return
 
-    # 安全调试日志：防止输出完整的 doc_id
-    print(f">>> [Debug] 最终解析出的 Doc ID 长度为: {len(doc_id)}，前 5 位为: {doc_id[:5]}...")
-
-    url = f"https://open.feishu.cn/open-apis/docx/v1/documents/{doc_id}/blocks/{doc_id}/children"
+    url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json; charset=utf-8"
     }
 
-    # 当天的日期标题，确保采用东八区日期
-    today_title = f"{datetime.now(BJ_TZ).strftime('%Y-%m-%d')} 市场监控日报"
-    print(f">>> [同步飞书] 今日要写入的文档 Title 为: {today_title}")
+    # 读取字段值
+    price_report = report_dict.get("price_report", "分析异常，未提取到报告数据")
+    industry_news = report_dict.get("industry_news", "分析异常，未提取到新闻数据")
+    
+    # 过滤可能存在导致转义失败的控制符
+    price_report = price_report.replace('\u0000', '')
+    industry_news = industry_news.replace('\u0000', '')
 
-    # 省略了 "index": -1，直接向末尾追加
+    today_str = datetime.now(BJ_TZ).strftime("%Y-%m-%d")
+
     payload = {
-        "children": [
-            {
-                "block_type": 4, 
-                "heading2": {
-                    "elements": [{"text_run": {"content": today_title}}]
-                }
-            },
-            {
-                "block_type": 2, 
-                "text": {
-                    "elements": [{"text_run": {"content": content}}]
-                }
-            },
-            {
-                "block_type": 22, 
-                "divider": {}
-            }
-        ]
+        "fields": {
+            "日期": today_str,
+            "价格日报": price_report,
+            "行业简讯": industry_news
+        }
     }
 
     try:
@@ -245,16 +251,13 @@ def append_to_feishu_docx(content):
         # 针对 400/500 等异常状态码全面拦截，不粗暴抛出报错，全量打印排查信息
         if resp.status_code != 200:
             print(f">>> [同步飞书] ❌ HTTP 请求失败，Status Code: {resp.status_code}")
-            # 若状态码是 404，特别增加中文提示
-            if resp.status_code == 404:
-                print(">>> [同步飞书] ⚠️ 404 错误提示：请核对飞书文档是否为新版文档（网址含 docx），旧版文档（网址含 docs）不支持此 API；同时请核对 Secret 中的 ID 是否正确。")
             print(f"--- 飞书 API 报错 Response (resp.text) --- \n{resp.text}\n------------------------------------------")
             print(f"--- 发送的 Payload 数据 --- \n{json.dumps(payload, ensure_ascii=False, indent=2)}\n-------------------------")
             return
             
         result = resp.json()
         if result.get("code") == 0:
-            print(">>> [同步飞书] ✅ 成功：大模型商业日报已被推送并追加至指定飞书文档最尾部！")
+            print(">>> [同步飞书] ✅ 成功：大模型商业日报已被推送至飞书 Bitable (多维表格) 中！")
         else:
             print(f">>> [同步飞书] ❌ 失败：写入遇到逻辑错误 ({result.get('code')}): {result.get('msg')}")
             print(f"--- 飞书 API 报错 Response 结构 --- \n{resp.text}\n-----------------------------------")
@@ -288,14 +291,18 @@ def main():
          )
 
     news_info = get_external_news()
-    report_text = generate_report(price_info, status_info, news_info)
+    report_dict = generate_report(price_info, status_info, news_info)
     
     print("\n----------------- 报告内容预览 -----------------")
-    preview = report_text[:300] + " ... (已折叠剩余部分)\n" if len(report_text) > 300 else report_text
-    print(preview)
+    import json
+    preview = json.dumps(report_dict, ensure_ascii=False, indent=2)
+    if len(preview) > 500:
+        print(preview[:500] + "\n... (已折叠剩余部分)")
+    else:
+        print(preview)
     print("------------------------------------------------\n")
 
-    append_to_feishu_docx(report_text)
+    append_to_feishu_bitable(report_dict)
     
     print("\n--- 今日报告闭环流转完毕，任务退出！ ---")
 
