@@ -93,10 +93,20 @@ def get_external_news():
     try:
         print(">>> [外部资讯] 正在建立 TavilyClient 连接并发送查询...")
         client = TavilyClient(api_key=api_key)
-        query = "过去24小时欧洲电视零售市场动态、电视产品上新与退市、显示面板供应链变动，以及欧洲家电相关的法律法规变化"
         
-        # 使用 Tavily 抓取内容
-        response = client.search(query=query, search_depth="basic", max_results=5)
+        # 动态日期前缀
+        today_dt = datetime.now(BJ_TZ)
+        today_zh_str = f"{today_dt.year}年{today_dt.month}月{today_dt.day}日"
+        query = f"{today_zh_str} 最新资讯：欧洲电视零售市场动态、电视产品上新、显示面板供应链变动，及欧洲家电法规变化"
+        
+        # 使用 Tavily 原生参数抓取新闻，严格限制只返回近1天数据
+        response = client.search(
+            query=query, 
+            search_depth="basic", 
+            topic="news", 
+            days=1, 
+            max_results=5
+        )
         results = response.get("results", [])
         
         if not results:
