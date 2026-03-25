@@ -104,7 +104,14 @@ def clean_price(text):
     
     try:
         if currency == "EUR":
-            clean_text = clean_text.replace(" ", "").replace(",", ".")
+            # 先清除空格，再区分格式：
+            # 德国格式 "1.999,00"（点为千分位，逗号为小数）→ 先移除点，再将逗号替换为点
+            # 法国格式 "1 999,00"（空格为千分位，逗号为小数）→ 移除空格后同理
+            clean_text = clean_text.replace(" ", "")
+            if "," in clean_text and "." in clean_text:
+                clean_text = clean_text.replace(".", "").replace(",", ".")
+            else:
+                clean_text = clean_text.replace(",", ".")
         else:
             clean_text = clean_text.replace(",", "").replace(" ", "")
         match = re.search(r"(\d+(\.\d+)?)", clean_text)
@@ -506,9 +513,75 @@ async def get_currys_price(page):
     
     return None
 
+async def get_mediamarkt_price(page):
+    """抓取 MediaMarkt.de 价格"""
+    # 策略 1: 通用 Schema/Meta（JSON-LD / og:price）
+    schema_res = await get_price_from_schema(page)
+    if schema_res: return schema_res
+
+    # 策略 2: 等待 JS 渲染完成后再尝试 CSS 选择器
+    try: await page.wait_for_selector("[data-test='mms-product-price'], .price, [class*='price']", timeout=5000)
+    except: pass
+
+    selectors = [
+        "[data-test='mms-product-price']",
+        "[class*='ProductPrice']",
+        "span[class*='price--value']",
+        "p[class*='price']",
+        ".price",
+        "span[class*='Price']",
+        "div[class*='price']",
+    ]
+    for sel in selectors:
+        try:
+            elements = await page.locator(sel).all()
+            for el in elements:
+                if await el.is_visible():
+                    is_crossed = await el.evaluate("el => window.getComputedStyle(el).textDecoration.includes('line-through') || !!el.closest('[class*=\"old\"], [class*=\"crossed\"], [class*=\"strike\"]')")
+                    if not is_crossed:
+                        text = await el.inner_text()
+                        result = clean_price(text)
+                        if result: return result
+        except: pass
+    return None
+
+
+async def get_coolblue_price(page):
+    """抓取 Coolblue.de 价格"""
+    # 策略 1: 通用 Schema/Meta（JSON-LD / og:price）
+    schema_res = await get_price_from_schema(page)
+    if schema_res: return schema_res
+
+    # 策略 2: Coolblue 特有选择器
+    try: await page.wait_for_selector("[class*='sales-price'], .price, [data-test*='price']", timeout=5000)
+    except: pass
+
+    selectors = [
+        "[class*='sales-price__current']",
+        "[class*='SalesPrice']",
+        "strong[class*='price']",
+        "[data-test='sales-price']",
+        "[class*='price--current']",
+        ".price",
+        "span[class*='price']",
+    ]
+    for sel in selectors:
+        try:
+            elements = await page.locator(sel).all()
+            for el in elements:
+                if await el.is_visible():
+                    is_crossed = await el.evaluate("el => window.getComputedStyle(el).textDecoration.includes('line-through') || !!el.closest('[class*=\"old\"], [class*=\"crossed\"], [class*=\"advice\"]')")
+                    if not is_crossed:
+                        text = await el.inner_text()
+                        result = clean_price(text)
+                        if result: return result
+        except: pass
+    return None
+
+
 # ================= 导入 Filler =================
 try:
-    from filler import get_first_result_darty, get_first_result_boulanger, get_first_result_fnac, get_first_result_amazon, get_first_result_currys, update_product_link_in_csv
+    from filler import get_first_result_darty, get_first_result_boulanger, get_first_result_fnac, get_first_result_amazon, get_first_result_currys, get_first_result_mediamarkt, get_first_result_coolblue, update_product_link_in_csv
     FILLER_AVAILABLE = True
 except ImportError:
     print("[警告] 未能导入 filler.py")
@@ -577,11 +650,18 @@ async def process_product(sem, browser, item, historical_prices):
         try:
             # === 创建独立上下文 (随机指纹) ===
             ua = random.choice(USER_AGENTS)
+            # 根据 Country 设置对应的区域和时区
+            if country == 'DE':
+                locale_str, tz_str = 'de-DE', 'Europe/Berlin'
+            elif country == 'FR':
+                locale_str, tz_str = 'fr-FR', 'Europe/Paris'
+            else:
+                locale_str, tz_str = 'en-GB', 'Europe/London'
             context = await browser.new_context(
                 user_agent=ua,
                 viewport={'width': random.choice([1920, 1366, 1440, 1536]), 'height': random.choice([1080, 768, 900])},
-                locale='en-GB',
-                timezone_id='Europe/London'
+                locale=locale_str,
+                timezone_id=tz_str
             )
             # 注入完整 Stealth 脚本
             await context.add_init_script(STEALTH_JS)
@@ -613,6 +693,10 @@ async def process_product(sem, browser, item, historical_prices):
                             new_link = await get_first_result_amazon(page, target_keyword)
                         elif "currys" in platform_lower:
                             new_link = await get_first_result_currys(page, target_keyword)
+                        elif "mediamarkt" in platform_lower:
+                            new_link = await get_first_result_mediamarkt(page, target_keyword)
+                        elif "coolblue" in platform_lower:
+                            new_link = await get_first_result_coolblue(page, target_keyword)
                         
                         if new_link:
                             print(f"  [成功] 自动填充: {new_link}")
@@ -658,8 +742,8 @@ async def process_product(sem, browser, item, historical_prices):
                                 timeout_val = 40000 if attempt == 0 else 60000
                                 await page.goto(url, wait_until='domcontentloaded', timeout=timeout_val)
                                 
-                                # === Currys 拦截检测 ===
-                                if "currys" in url.lower():
+                                # === Bot 拦截检测（Currys / MediaMarkt / Coolblue）===
+                                if "currys" in url.lower() or "mediamarkt" in url.lower() or "coolblue" in url.lower():
                                     await handle_currys_cloudflare(page, name)
                             except Exception as e:
                                 print(f"  [{name}] 导航超时/错误 ({attempt+1}): {e}")
@@ -740,6 +824,12 @@ async def process_product(sem, browser, item, historical_prices):
                         elif "currys" in platform_lower:
                             try: await page.wait_for_selector("strong[data-product='price'], .price, [data-test='current-price'], span.value", timeout=5000)
                             except: pass
+                        elif "mediamarkt" in platform_lower:
+                            try: await page.wait_for_selector("[data-test='mms-product-price'], .price, [class*='price']", timeout=8000)
+                            except: pass
+                        elif "coolblue" in platform_lower:
+                            try: await page.wait_for_selector("[class*='sales-price'], .price, [data-test*='price']", timeout=8000)
+                            except: pass
 
                         # 抓取价格
                         price_data = None
@@ -747,6 +837,8 @@ async def process_product(sem, browser, item, historical_prices):
                         elif "darty" in platform_lower: price_data = await get_darty_price(page)
                         elif "boulanger" in platform_lower: price_data = await get_boulanger_price(page)
                         elif "currys" in platform_lower: price_data = await get_currys_price(page)
+                        elif "mediamarkt" in platform_lower: price_data = await get_mediamarkt_price(page)
+                        elif "coolblue" in platform_lower: price_data = await get_coolblue_price(page)
                         elif is_amazon:
                             # 缺货检测
                             is_oos = False

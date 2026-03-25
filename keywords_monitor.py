@@ -305,6 +305,89 @@ async def http_search_darty(keyword):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, _http_search_darty, keyword)
 
+def _http_search_mediamarkt(keyword):
+    """使用 curl_cffi 伪装真实浏览器进行 HTTP 请求，绕过 MediaMarkt 防护"""
+    products = []
+    search_url = f"https://www.mediamarkt.de/search?query={urllib.parse.quote(keyword)}"
+
+    impersonate_list = ["chrome100", "chrome104", "chrome110", "chrome116", "safari15_3", "safari15_5", "edge101"]
+    impersonate_choice = random.choice(impersonate_list)
+    print(f"  [MediaMarkt] 请求指纹: {impersonate_choice}")
+
+    try:
+        session = cffi_requests.Session(impersonate=impersonate_choice)
+        session.get("https://www.mediamarkt.de/", timeout=20)
+        time.sleep(random.uniform(1, 4))
+
+        resp = session.get(search_url, timeout=20)
+        print(f"  [MediaMarkt HTTP] 状态码: {resp.status_code}, 响应长度: {len(resp.text)}")
+
+        if resp.status_code == 200 and len(resp.text) > 5000:
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for a_tag in soup.select("a[href*='/product/']"):
+                href = a_tag.get("href", "")
+                title = a_tag.get("title", "") or a_tag.get_text(strip=True)
+                if href and title and len(title) > 5:
+                    url = "https://www.mediamarkt.de" + href if not href.startswith("http") else href
+                    products.append({"title": title, "url": url})
+        else:
+            print(f"  [MediaMarkt HTTP] 请求被拦截或异常 (状态码: {resp.status_code})")
+            try:
+                with open("debug_mediamarkt_http_response.html", "w", encoding="utf-8") as f:
+                    f.write(resp.text[:5000])
+            except: pass
+    except Exception as e:
+        print(f"  [MediaMarkt HTTP] 请求异常: {e}")
+    return products
+
+
+def _http_search_coolblue(keyword):
+    """使用 curl_cffi 伪装真实浏览器进行 HTTP 请求，绕过 Coolblue 防护"""
+    products = []
+    search_url = f"https://www.coolblue.de/de/suche?query={urllib.parse.quote(keyword)}"
+
+    impersonate_list = ["chrome100", "chrome104", "chrome110", "chrome116", "safari15_3", "safari15_5", "edge101"]
+    impersonate_choice = random.choice(impersonate_list)
+    print(f"  [Coolblue] 请求指纹: {impersonate_choice}")
+
+    try:
+        session = cffi_requests.Session(impersonate=impersonate_choice)
+        session.get("https://www.coolblue.de/", timeout=20)
+        time.sleep(random.uniform(1, 4))
+
+        resp = session.get(search_url, timeout=20)
+        print(f"  [Coolblue HTTP] 状态码: {resp.status_code}, 响应长度: {len(resp.text)}")
+
+        if resp.status_code == 200 and len(resp.text) > 5000:
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for a_tag in soup.select("a[href*='/product/'], a[href*='/produkt/']"):
+                href = a_tag.get("href", "")
+                title = a_tag.get("title", "") or a_tag.get_text(strip=True)
+                if href and title and len(title) > 5:
+                    url = "https://www.coolblue.de" + href if not href.startswith("http") else href
+                    products.append({"title": title, "url": url})
+        else:
+            print(f"  [Coolblue HTTP] 请求被拦截或异常 (状态码: {resp.status_code})")
+            try:
+                with open("debug_coolblue_http_response.html", "w", encoding="utf-8") as f:
+                    f.write(resp.text[:5000])
+            except: pass
+    except Exception as e:
+        print(f"  [Coolblue HTTP] 请求异常: {e}")
+    return products
+
+
+async def http_search_mediamarkt(keyword):
+    """异步包装器"""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _http_search_mediamarkt, keyword)
+
+
+async def http_search_coolblue(keyword):
+    """异步包装器"""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _http_search_coolblue, keyword)
+
 async def homepage_warmup(page, platform_url):
     """全局首页预热机制：先访问首页，接受 Cookie，滑动一下，再跳转搜索页"""
     try:
@@ -749,6 +832,136 @@ async def search_scraper_async(page, platform, keyword):
                 print(f"  [Fnac搜索失败] {e}")
                 try: await page.screenshot(path=f"error_screenshot_fnac_{keyword}.png", full_page=True)
                 except: pass
+
+        # ---- MediaMarkt 分支 (HTTP优先 + Playwright兜底) ----
+        elif "mediamarkt" in platform_lower:
+            # === 第一层：curl_cffi 纯 HTTP ===
+            try:
+                print("  [MediaMarkt] 策略1: 启用 curl_cffi 纯HTTP模式...")
+                http_results = await http_search_mediamarkt(keyword)
+                for item in http_results:
+                    if await validate_title_match(item["title"], keyword):
+                        products.append(item)
+                if products:
+                    print(f"  [MediaMarkt] HTTP模式成功! 获取到 {len(products)} 条匹配商品。")
+            except Exception as e:
+                print(f"  [MediaMarkt] HTTP模式异常: {e}")
+
+            # === 第二层兜底：Playwright ===
+            if not products:
+                print("  [MediaMarkt] HTTP模式未获取到结果，启用 Playwright 浏览器兜底...")
+                try:
+                    await homepage_warmup(page, "https://www.mediamarkt.de")
+                    await handle_bot_protection(page, keyword)
+                    await asyncio.sleep(random.uniform(1, 2))
+
+                    search_input = None
+                    for selector in ["input[data-test='mms-search-input']", "input[name='query']", "input[placeholder*='Suchen']", "input[type='search']"]:
+                        try:
+                            loc = page.locator(selector).first
+                            if await loc.count() > 0 and await loc.is_visible():
+                                search_input = loc
+                                break
+                        except: pass
+
+                    if search_input:
+                        try: await search_input.evaluate("el => el.focus()")
+                        except: pass
+                        await search_input.click(force=True)
+                        await search_input.fill("", force=True)
+                        await search_input.press_sequentially(keyword, delay=150)
+                        await asyncio.sleep(0.5)
+                        await search_input.press("Enter")
+                        try: await page.wait_for_load_state("domcontentloaded", timeout=15000)
+                        except: pass
+                        await asyncio.sleep(4)
+                    else:
+                        search_url = f"https://www.mediamarkt.de/search?query={urllib.parse.quote(keyword)}"
+                        try: await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+                        except: pass
+                        await handle_bot_protection(page, keyword)
+                        await asyncio.sleep(3)
+
+                    links = await page.locator("a[href*='/product/']").all()
+                    for link_locator in links:
+                        href = await link_locator.get_attribute("href")
+                        title = await link_locator.inner_text()
+                        if href and await validate_title_match(title, keyword):
+                            url = "https://www.mediamarkt.de" + href if not href.startswith("http") else href
+                            products.append({"title": title.strip(), "url": url})
+
+                    if not products:
+                        try: await page.screenshot(path=f"error_screenshot_empty_mediamarkt_{keyword}.png", full_page=True)
+                        except: pass
+                except Exception as e:
+                    print(f"  [MediaMarkt Playwright兜底失败] {e}")
+                    try: await page.screenshot(path=f"error_screenshot_mediamarkt_{keyword}.png", full_page=True)
+                    except: pass
+
+        # ---- Coolblue 分支 (HTTP优先 + Playwright兜底) ----
+        elif "coolblue" in platform_lower:
+            # === 第一层：curl_cffi 纯 HTTP ===
+            try:
+                print("  [Coolblue] 策略1: 启用 curl_cffi 纯HTTP模式...")
+                http_results = await http_search_coolblue(keyword)
+                for item in http_results:
+                    if await validate_title_match(item["title"], keyword):
+                        products.append(item)
+                if products:
+                    print(f"  [Coolblue] HTTP模式成功! 获取到 {len(products)} 条匹配商品。")
+            except Exception as e:
+                print(f"  [Coolblue] HTTP模式异常: {e}")
+
+            # === 第二层兜底：Playwright ===
+            if not products:
+                print("  [Coolblue] HTTP模式未获取到结果，启用 Playwright 浏览器兜底...")
+                try:
+                    await homepage_warmup(page, "https://www.coolblue.de")
+                    await handle_bot_protection(page, keyword)
+                    await asyncio.sleep(random.uniform(1, 2))
+
+                    search_input = None
+                    for selector in ["input[data-test='search-input']", "input[name='query']", "input[placeholder*='Suchen']", "input[type='search']"]:
+                        try:
+                            loc = page.locator(selector).first
+                            if await loc.count() > 0 and await loc.is_visible():
+                                search_input = loc
+                                break
+                        except: pass
+
+                    if search_input:
+                        try: await search_input.evaluate("el => el.focus()")
+                        except: pass
+                        await search_input.click(force=True)
+                        await search_input.fill("", force=True)
+                        await search_input.press_sequentially(keyword, delay=150)
+                        await asyncio.sleep(0.5)
+                        await search_input.press("Enter")
+                        try: await page.wait_for_load_state("domcontentloaded", timeout=15000)
+                        except: pass
+                        await asyncio.sleep(4)
+                    else:
+                        search_url = f"https://www.coolblue.de/de/suche?query={urllib.parse.quote(keyword)}"
+                        try: await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+                        except: pass
+                        await handle_bot_protection(page, keyword)
+                        await asyncio.sleep(3)
+
+                    links = await page.locator("a[href*='/product/'], a[href*='/produkt/']").all()
+                    for link_locator in links:
+                        href = await link_locator.get_attribute("href")
+                        title = await link_locator.inner_text()
+                        if href and await validate_title_match(title, keyword):
+                            url = "https://www.coolblue.de" + href if not href.startswith("http") else href
+                            products.append({"title": title.strip(), "url": url})
+
+                    if not products:
+                        try: await page.screenshot(path=f"error_screenshot_empty_coolblue_{keyword}.png", full_page=True)
+                        except: pass
+                except Exception as e:
+                    print(f"  [Coolblue Playwright兜底失败] {e}")
+                    try: await page.screenshot(path=f"error_screenshot_coolblue_{keyword}.png", full_page=True)
+                    except: pass
 
         # ---- 兜底逻辑：无特定规则的平台 ----
         else:

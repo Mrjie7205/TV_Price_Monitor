@@ -317,6 +317,126 @@ async def get_first_result_currys(page, keyword):
         print(f"  [Currys搜索失败] {e}")
     return None
 
+async def get_first_result_mediamarkt(page, keyword):
+    """在 MediaMarkt.de 搜索并提取第一个结果"""
+    print(f"  正在 MediaMarkt 搜索: {keyword} ...")
+    try:
+        await page.goto("https://www.mediamarkt.de", wait_until='domcontentloaded', timeout=30000)
+        await asyncio.sleep(random.uniform(1.5, 3.0))
+
+        # 接受 Cookie（德语按钮）
+        for btn in ["[data-testid='mms-accept-all-button']", "button:has-text('Alle akzeptieren')", "button:has-text('Akzeptieren')", "#onetrust-accept-btn-handler"]:
+            try:
+                if await page.is_visible(btn, timeout=2000):
+                    await page.click(btn)
+                    await asyncio.sleep(1)
+                    break
+            except: pass
+
+        # 尝试搜索框
+        search_input = None
+        for sel in ["input[data-test='mms-search-input']", "input[name='query']", "input[placeholder*='Suchen']", "input[type='search']"]:
+            try:
+                loc = page.locator(sel).first
+                if await loc.count() > 0 and await loc.is_visible():
+                    search_input = loc
+                    break
+            except: pass
+
+        if search_input:
+            await search_input.click(force=True)
+            await search_input.fill("")
+            await asyncio.sleep(0.3)
+            await page.keyboard.type(keyword, delay=100)
+            await asyncio.sleep(0.5)
+            await page.keyboard.press("Enter")
+            try: await page.wait_for_load_state("domcontentloaded", timeout=15000)
+            except: pass
+            await asyncio.sleep(3)
+        else:
+            search_url = f"https://www.mediamarkt.de/search?query={urllib.parse.quote(keyword)}"
+            await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+            await asyncio.sleep(3)
+
+        # 提取结果链接
+        selectors = ["a[href*='/product/']", "a[data-test='mms-router-link']", "article a", "li a[href*='/de/product/']"]
+        for sel in selectors:
+            locators = await page.locator(sel).all()
+            for loc in locators:
+                if await loc.is_visible():
+                    href = await loc.get_attribute("href")
+                    if href and "/product/" in href:
+                        if not href.startswith("http"):
+                            href = "https://www.mediamarkt.de" + href
+                        title = await loc.inner_text()
+                        if validate_link(href, keyword, title):
+                            print(f"  -> 找到链接: {href}")
+                            return href
+    except Exception as e:
+        print(f"  [MediaMarkt搜索失败] {e}")
+    return None
+
+
+async def get_first_result_coolblue(page, keyword):
+    """在 Coolblue.de 搜索并提取第一个结果"""
+    print(f"  正在 Coolblue 搜索: {keyword} ...")
+    try:
+        await page.goto("https://www.coolblue.de", wait_until='domcontentloaded', timeout=30000)
+        await asyncio.sleep(random.uniform(1.5, 3.0))
+
+        # 接受 Cookie
+        for btn in ["button:has-text('Akzeptieren')", "button:has-text('Alle akzeptieren')", "#onetrust-accept-btn-handler", "[data-test='accept-cookies']"]:
+            try:
+                if await page.is_visible(btn, timeout=2000):
+                    await page.click(btn)
+                    await asyncio.sleep(1)
+                    break
+            except: pass
+
+        # 尝试搜索框
+        search_input = None
+        for sel in ["input[data-test='search-input']", "input[name='query']", "input[placeholder*='Suchen']", "input[type='search']"]:
+            try:
+                loc = page.locator(sel).first
+                if await loc.count() > 0 and await loc.is_visible():
+                    search_input = loc
+                    break
+            except: pass
+
+        if search_input:
+            await search_input.click(force=True)
+            await search_input.fill("")
+            await asyncio.sleep(0.3)
+            await page.keyboard.type(keyword, delay=100)
+            await asyncio.sleep(0.5)
+            await page.keyboard.press("Enter")
+            try: await page.wait_for_load_state("domcontentloaded", timeout=15000)
+            except: pass
+            await asyncio.sleep(3)
+        else:
+            search_url = f"https://www.coolblue.de/de/suche?query={urllib.parse.quote(keyword)}"
+            await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+            await asyncio.sleep(3)
+
+        # 提取结果链接
+        selectors = ["a[href*='/product/']", "a[href*='/produkt/']", "li[data-test='product'] a", "article a"]
+        for sel in selectors:
+            locators = await page.locator(sel).all()
+            for loc in locators:
+                if await loc.is_visible():
+                    href = await loc.get_attribute("href")
+                    if href and ("/product/" in href or "/produkt/" in href):
+                        if not href.startswith("http"):
+                            href = "https://www.coolblue.de" + href
+                        title = await loc.inner_text()
+                        if validate_link(href, keyword, title):
+                            print(f"  -> 找到链接: {href}")
+                            return href
+    except Exception as e:
+        print(f"  [Coolblue搜索失败] {e}")
+    return None
+
+
 # ================= 辅助函数 =================
 
 def update_product_link_in_csv(product_name, new_url):
@@ -419,6 +539,10 @@ async def run_filler_async(headless=False):
                         new_link = await get_first_result_amazon(page, target_keyword)
                     elif "currys" in platform_lower:
                         new_link = await get_first_result_currys(page, target_keyword)
+                    elif "mediamarkt" in platform_lower:
+                        new_link = await get_first_result_mediamarkt(page, target_keyword)
+                    elif "coolblue" in platform_lower:
+                        new_link = await get_first_result_coolblue(page, target_keyword)
                 except Exception as e:
                     print(f"  [任务出错] {name}: {e}")
                 
