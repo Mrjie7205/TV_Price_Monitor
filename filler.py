@@ -12,6 +12,40 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_FILE = os.path.join(BASE_DIR, "products.csv")
 USER_AGENT_STR = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
 
+STEALTH_JS = """
+// 1. 屏蔽 webdriver
+Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+// 2. 伪造 plugins
+Object.defineProperty(navigator, 'plugins', {
+    get: () => [
+        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+        { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
+    ]
+});
+
+// 3. 伪造 languages
+Object.defineProperty(navigator, 'languages', { get: () => ['de-DE', 'de', 'en-US', 'en'] });
+Object.defineProperty(navigator, 'language', { get: () => 'de-DE' });
+
+// 4. 屏蔽 chrome.runtime
+if (window.chrome) {
+    window.chrome.runtime = undefined;
+}
+
+// 5. 伪造 permissions
+const originalQuery = window.navigator.permissions.query;
+window.navigator.permissions.query = (parameters) => (
+    parameters.name === 'notifications' ?
+        Promise.resolve({ state: Notification.permission }) :
+        originalQuery(parameters)
+);
+
+// 6. 隐藏 Headless 特征
+Object.defineProperty(window, 'outerWidth', { get: () => window.innerWidth });
+Object.defineProperty(window, 'outerHeight', { get: () => window.innerHeight + 85 });
+"""
 # ================= 辅助验证函数 =================
 
 def validate_link(link, keyword, page_title=""):
@@ -21,49 +55,78 @@ def validate_link(link, keyword, page_title=""):
     """
     if not link: return False
     
-    # 将关键词拆分为部分，过滤短词
     parts = [p.strip().lower() for p in keyword.split() if len(p.strip()) >= 2]
-    if not parts: return True # 如果没法拆分出有效词，保守处理
+    if not parts: return True
 
     link_lower = link.lower()
     title_lower = page_title.lower() if page_title else ""
     
-    # 核心验证逻辑
+    brand = parts[0]
+    import re
+    def has_word(w, text):
+        t = text.replace("-", " ").replace("/", " ")
+        # Insert space between numbers and letters (e.g. 65u8q -> 65 u8 q) to allow word boundaries to match correctly
+        # when User introduces artificial spaces in product names but the URLs are consolidated.
+        t = re.sub(r'([0-9])([a-zA-Z])', r'\1 \2', t)
+        t = re.sub(r'([a-zA-Z])([0-9])', r'\1 \2', t)
+        w_clean = re.sub(r'([0-9])([a-zA-Z])', r'\1 \2', w)
+        w_clean = re.sub(r'([a-zA-Z])([0-9])', r'\1 \2', w_clean)
+        return bool(re.search(r'\b' + re.escape(w) + r'\b', t)) or bool(re.search(r'\b' + re.escape(w_clean) + r'\b', t))
+        
+    if not has_word(brand, link_lower) and not has_word(brand, title_lower) and brand not in link_lower.replace("-", ""):
+        print(f"    [链接被拒] 搜索: {keyword} | 找到标题: {page_title} | 原因: 缺失核心品牌 [{brand}]")
+        return False
+    
     matches = 0
     model_matches = 0
     for i, p in enumerate(parts):
-        if p in link_lower or p in title_lower:
-            matches += 1
-            if i > 0: # 认为是型号词汇
-                model_matches += 1
+        if len(p) <= 3 or p in ["pro", "max", "ultra", "plus"]:
+            if has_word(p, link_lower) or has_word(p, title_lower):
+                matches += 1
+                if i > 0: model_matches += 1
+        else:
+            if p in link_lower.replace("-", "") or p in title_lower:
+                matches += 1
+                if i > 0: model_matches += 1
             
-    # 如果一个词都没对上，直接排除
     if matches == 0:
         print(f"    [链接被拒] 搜索: {keyword} | 找到标题: {page_title} | 原因: 关键词全军覆没")
         return False
     
-    # 强化匹配逻辑：如果关键词包含多部分（如品牌+型号），必须命中至少一个型号词
     if len(parts) >= 2 and model_matches == 0:
         print(f"    [链接被拒] 搜索: {keyword} | 找到标题: {page_title} | 原因: 仅匹配到品牌，未匹配到核心型号")
         return False
     
-    # 针对电视等产品，如果搜出来了不相干的品类（特别是白电、手机、无人机），直接过滤
-    anti_keywords = ["dji", "drone", "mavic", "fly-more", "lave-linge", "washing machine", "frigo", "réfrigérateur", "refrigerator", "four", "oven", "aspirateur", "vacuum", "micro-ondes", "smartphone", "galaxy"]
-    if any(ak in keyword.lower() for ak in ["samsung", "tcl", "hisense", "tv", "monitor", "écran"]):
+    anti_keywords = ["dji", "drone", "mavic", "fly-more", "lave-linge", "washing machine", "frigo", "réfrigérateur", "refrigerator", "four", "oven", "aspirateur", "vacuum", "micro-ondes", "smartphone", "galaxy", "hue", "bulb", "light", "ampoule", "zubehor", "zubehör"]
+    if any(k in keyword.lower() for k in ["samsung", "tcl", "hisense", "tv", "monitor", "écran"]):
         if any(ak in link_lower or ak in title_lower for ak in anti_keywords):
             print(f"    [链接被拒] 搜索: {keyword} | 找到标题: {page_title} | 原因: 触碰家电黑名单")
             return False
 
     return True
 
-async def handle_currys_cloudflare(page, keyword=""):
-    """检测并处理 Currys 的 Cloudflare 'Bear with us' 拦截页"""
+async def handle_antibot_page(page, keyword=""):
+    """检测并处理各电商网站的反爬拦截页"""
     try:
-        for _ in range(3):
+        for _ in range(4):
             content = await page.content()
             title = await page.title()
-            if "Bear with us" in title or "checking your connection" in content.lower() or "Verify you are human" in content:
-                print(f"  [{keyword}] ⚠ 检测到 Currys 验证页，等待 5s...")
+            title_lower = title.lower()
+            content_lower = content.lower()
+            
+            is_bot_page = (
+                "bear with us" in title_lower or 
+                "checking your connection" in content_lower or 
+                "verify you are human" in content_lower or
+                "just a moment" in title_lower or
+                "ein moment" in title_lower or
+                "access denied" in title_lower or
+                "attention required" in title_lower or
+                "cloudflare" in title_lower
+            )
+            
+            if is_bot_page:
+                print(f"  [{keyword}] ⚠ 检测到 Anti-Bot 拦截页 ({title})，等待 5s...")
                 await asyncio.sleep(5)
             else:
                 return True
@@ -261,7 +324,7 @@ async def get_first_result_currys(page, keyword):
     print(f"  正在 Currys 搜索: {keyword} ...")
     try:
         await page.goto("https://www.currys.co.uk", wait_until='domcontentloaded', timeout=30000)
-        await handle_currys_cloudflare(page, keyword)
+        await handle_antibot_page(page, keyword)
         await asyncio.sleep(random.uniform(1, 2))
         
         try:
@@ -291,7 +354,7 @@ async def get_first_result_currys(page, keyword):
         else:
             search_url = f"https://www.currys.co.uk/search/{urllib.parse.quote(keyword)}"
             await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
-            await handle_currys_cloudflare(page, keyword)
+            await handle_antibot_page(page, keyword)
             await asyncio.sleep(3)
         
         current_url = page.url
@@ -317,11 +380,135 @@ async def get_first_result_currys(page, keyword):
         print(f"  [Currys搜索失败] {e}")
     return None
 
+async def get_first_result_mediamarkt(page, keyword):
+    """在 MediaMarkt.de 搜索并提取第一个结果"""
+    print(f"  正在 MediaMarkt 搜索: {keyword} ...")
+    try:
+        await page.goto("https://www.mediamarkt.de", wait_until='domcontentloaded', timeout=30000)
+        await handle_antibot_page(page, keyword)
+        await asyncio.sleep(random.uniform(1.5, 3.0))
+
+        # 接受 Cookie（德语按钮）
+        for btn in ["[data-testid='mms-accept-all-button']", "button:has-text('Alle akzeptieren')", "button:has-text('Akzeptieren')", "#onetrust-accept-btn-handler"]:
+            try:
+                if await page.is_visible(btn, timeout=2000):
+                    await page.click(btn)
+                    await asyncio.sleep(1)
+                    break
+            except: pass
+
+        # 尝试搜索框
+        search_input = None
+        for sel in ["input[data-test='mms-search-input']", "input[name='query']", "input[placeholder*='Suchen']", "input[type='search']"]:
+            try:
+                loc = page.locator(sel).first
+                if await loc.count() > 0 and await loc.is_visible():
+                    search_input = loc
+                    break
+            except: pass
+
+        if search_input:
+            await search_input.click(force=True)
+            await search_input.fill("")
+            await asyncio.sleep(0.3)
+            await page.keyboard.type(keyword, delay=100)
+            await asyncio.sleep(0.5)
+            await page.keyboard.press("Enter")
+            try: await page.wait_for_load_state("domcontentloaded", timeout=15000)
+            except: pass
+            await asyncio.sleep(3)
+        else:
+            search_url = f"https://www.mediamarkt.de/search?query={urllib.parse.quote(keyword)}"
+            await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+            await handle_antibot_page(page, keyword)
+            await asyncio.sleep(3)
+
+        # 提取结果链接
+        selectors = ["a[href*='/product/']", "a[data-test='mms-router-link']", "article a", "li a[href*='/de/product/']"]
+        for sel in selectors:
+            locators = await page.locator(sel).all()
+            for loc in locators:
+                if await loc.is_visible():
+                    href = await loc.get_attribute("href")
+                    if href and "/product/" in href:
+                        if not href.startswith("http"):
+                            href = "https://www.mediamarkt.de" + href
+                        title = await loc.inner_text()
+                        if validate_link(href, keyword, title):
+                            print(f"  -> 找到链接: {href}")
+                            return href
+    except Exception as e:
+        print(f"  [MediaMarkt搜索失败] {e}")
+    return None
+
+
+async def get_first_result_coolblue(page, keyword):
+    """在 Coolblue.de 搜索并提取第一个结果"""
+    print(f"  正在 Coolblue 搜索: {keyword} ...")
+    try:
+        await page.goto("https://www.coolblue.de", wait_until='domcontentloaded', timeout=30000)
+        await handle_antibot_page(page, keyword)
+        await asyncio.sleep(random.uniform(1.5, 3.0))
+
+        # 接受 Cookie
+        for btn in ["button:has-text('Akzeptieren')", "button:has-text('Alle akzeptieren')", "#onetrust-accept-btn-handler", "[data-test='accept-cookies']"]:
+            try:
+                if await page.is_visible(btn, timeout=2000):
+                    await page.click(btn)
+                    await asyncio.sleep(1)
+                    break
+            except: pass
+
+        # 尝试搜索框
+        search_input = None
+        for sel in ["input[data-test='search-input']", "input[name='query']", "input[placeholder*='Suchen']", "input[type='search']"]:
+            try:
+                loc = page.locator(sel).first
+                if await loc.count() > 0 and await loc.is_visible():
+                    search_input = loc
+                    break
+            except: pass
+
+        if search_input:
+            await search_input.click(force=True)
+            await search_input.fill("")
+            await asyncio.sleep(0.3)
+            await page.keyboard.type(keyword, delay=100)
+            await asyncio.sleep(0.5)
+            await page.keyboard.press("Enter")
+            try: await page.wait_for_load_state("domcontentloaded", timeout=15000)
+            except: pass
+            await asyncio.sleep(3)
+        else:
+            search_url = f"https://www.coolblue.de/de/suche?query={urllib.parse.quote(keyword)}"
+            await page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+            await handle_antibot_page(page, keyword)
+            await asyncio.sleep(3)
+
+        # 提取结果链接
+        selectors = ["a[href*='/product/']", "a[href*='/produkt/']", "li[data-test='product'] a", "article a"]
+        for sel in selectors:
+            locators = await page.locator(sel).all()
+            for loc in locators:
+                if await loc.is_visible():
+                    href = await loc.get_attribute("href")
+                    if href and ("/product/" in href or "/produkt/" in href):
+                        if not href.startswith("http"):
+                            href = "https://www.coolblue.de" + href
+                        title = await loc.inner_text()
+                        if validate_link(href, keyword, title):
+                            print(f"  -> 找到链接: {href}")
+                            return href
+    except Exception as e:
+        print(f"  [Coolblue搜索失败] {e}")
+    return None
+
+
 # ================= 辅助函数 =================
 
-def update_product_link_in_csv(product_name, new_url):
+def update_product_link_in_csv(product_name, platform, new_url):
     """
-    更新 CSV 中的链接
+    更新 CSV 中的链接，严格匹配商品名和平台
     """
     csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "products.csv")
     if not os.path.exists(csv_path): return False
@@ -337,7 +524,9 @@ def update_product_link_in_csv(product_name, new_url):
             if not fieldnames: return False
             for row in reader:
                 p_name = row.get("Product Name") or row.get("型号")
-                if p_name and p_name.strip() == product_name.strip():
+                p_plat = row.get("Platform") or row.get("平台")
+                
+                if p_name and p_plat and p_name.strip() == product_name.strip() and p_plat.strip().lower() == platform.strip().lower():
                     if "Link" in row: row["Link"] = new_url
                     elif "链接" in row: row["链接"] = new_url
                     elif "url" in row: row["url"] = new_url
@@ -394,8 +583,8 @@ async def run_filler_async(headless=False):
 
         async def process_item(idx):
             async with sem:
-                context = await browser.new_context(user_agent=USER_AGENT_STR, locale="en-US")
-                await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                context = await browser.new_context(user_agent=USER_AGENT_STR, locale="de-DE", timezone_id="Europe/Berlin", viewport={'width': 1920, 'height': 1080})
+                await context.add_init_script(STEALTH_JS)
                 page = await context.new_page()
                 
                 row = rows[idx]
@@ -419,6 +608,10 @@ async def run_filler_async(headless=False):
                         new_link = await get_first_result_amazon(page, target_keyword)
                     elif "currys" in platform_lower:
                         new_link = await get_first_result_currys(page, target_keyword)
+                    elif "mediamarkt" in platform_lower:
+                        new_link = await get_first_result_mediamarkt(page, target_keyword)
+                    elif "coolblue" in platform_lower:
+                        new_link = await get_first_result_coolblue(page, target_keyword)
                 except Exception as e:
                     print(f"  [任务出错] {name}: {e}")
                 
