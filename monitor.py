@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import csv
 import json
 import os
@@ -104,7 +104,14 @@ def clean_price(text):
     
     try:
         if currency == "EUR":
-            clean_text = clean_text.replace(" ", "").replace(",", ".")
+            # 先清除空格，再区分格式：
+            # 德国格式 "1.999,00"（点为千分位，逗号为小数）→ 先移除点，再将逗号替换为点
+            # 法国格式 "1 999,00"（空格为千分位，逗号为小数）→ 移除空格后同理
+            clean_text = clean_text.replace(" ", "")
+            if "," in clean_text and "." in clean_text:
+                clean_text = clean_text.replace(".", "").replace(",", ".")
+            else:
+                clean_text = clean_text.replace(",", ".")
         else:
             clean_text = clean_text.replace(",", "").replace(" ", "")
         match = re.search(r"(\d+(\.\d+)?)", clean_text)
@@ -113,15 +120,28 @@ def clean_price(text):
     except: pass
     return None
 
-async def handle_currys_cloudflare(page, name=""):
-    """检测并处理 Currys 的 Cloudflare 'Bear with us' 拦截页"""
+async def handle_antibot_page(page, name=""):
+    """检测并处理 Cloudflare / Datadome / Akamai 等拦截页"""
     try:
-        # 检测特征文字或标题
-        for _ in range(3): # 最多等待 3 次，共计约 15s
+        for _ in range(4): # 增加等待次数
             content = await page.content()
             title = await page.title()
-            if "Bear with us" in title or "checking your connection" in content.lower() or "Verify you are human" in content:
-                print(f"  [{name}] ⚠ 检测到 Currys 验证页 (Cloudflare)，尝试原地等待 5s...")
+            title_lower = title.lower()
+            content_lower = content.lower()
+            
+            is_bot_page = (
+                "bear with us" in title_lower or 
+                "checking your connection" in content_lower or 
+                "verify you are human" in content_lower or
+                "just a moment" in title_lower or
+                "ein moment" in title_lower or
+                "access denied" in title_lower or
+                "attention required" in title_lower or
+                "cloudflare" in title_lower
+            )
+            
+            if is_bot_page:
+                print(f"  [{name}] ⚠ 检测到 Anti-Bot 拦截页 ({title})，尝试原地等待 5s...")
                 await asyncio.sleep(5)
             else:
                 return True # 不再包含验证特征，认为已通过
@@ -281,9 +301,15 @@ async def get_price_from_schema(page):
     """通用方法：从 JSON-LD 或 Meta 标签中提取价格"""
     # 1. Meta Tags (Open Graph / Product Meta)
     try:
+        # Check standard opengraph and microdata
         amount = await page.get_attribute("meta[property='product:price:amount']", "content", timeout=500)
+        if not amount:
+            amount = await page.get_attribute("meta[itemprop='price']", "content", timeout=500)
+        
         if amount:
             currency = await page.get_attribute("meta[property='product:price:currency']", "content") or "EUR"
+            if not currency or amount == currency:
+                currency = await page.get_attribute("meta[itemprop='priceCurrency']", "content") or "EUR"
             return float(amount.replace(",", ".")), currency
     except: pass
 
@@ -506,9 +532,129 @@ async def get_currys_price(page):
     
     return None
 
+async def get_mediamarkt_price(page):
+    """抓取 MediaMarkt.de 价格"""
+    # 策略 1: 通用 Schema/Meta（JSON-LD / og:price）
+    schema_res = await get_price_from_schema(page)
+    # MediaMarkt 电视不可能低于 150 欧元，防呆保护避免 Schema 匹配错误
+    if schema_res and schema_res[0] > 150: return schema_res
+
+    # 策略 2: 等待 JS 渲染完成后再尝试 CSS 选择器
+    try: await page.wait_for_selector("[data-test='mms-product-detail-price'], [data-test='mms-product-price'], [itemprop='price'], .price", timeout=5000)
+    except: pass
+
+    # 策略 3: 使用 JS 直接在浏览器端进行智能价格提取，以屏蔽复杂的 DOM 嵌套及百分比打折（-57%）和分期等组件干扰
+    js_extract = """() => {
+        let maxFontSize = 0;
+        let bestPrice = null;
+        
+        // 查找所有页面内可能包含价格的标签
+        let els = document.querySelectorAll("span, div, p, strong, h1, h2");
+        for (let el of els) {
+            // 只看包含数字的，且不能是全空的
+            let txt = el.innerText || "";
+            if (!/\\d/.test(txt)) continue;
+            
+            // 剔除包含百分比（如 -57%）、由于包含了子元素的百分比而被污染的组合、以及分期付款和建议零售价(UVP)字眼
+            let lowerTxt = txt.toLowerCase();
+            if (lowerTxt.includes('%') || lowerTxt.includes('uvp') || lowerTxt.includes('mtl') || lowerTxt.includes('monat') || lowerTxt.includes('zins')) {
+                continue;
+            }
+            
+            // 不能是被划掉的价格（原价）
+            let style = window.getComputedStyle(el);
+            if (style.textDecoration && style.textDecoration.includes('line-through')) {
+                continue;
+            }
+            
+            // 分析其字体大小。主价格往往具有最大字体（通常在24px-44px之间）。
+            let fontSize = parseFloat(style.fontSize);
+            if (!isNaN(fontSize) && fontSize > maxFontSize && fontSize >= 18) {
+                maxFontSize = fontSize;
+                // 有些时候大的包装层包含了纯价格，只要它剔除了 % 和 UVP 干扰，拿它就行。
+                bestPrice = txt;
+            }
+        }
+        return bestPrice;
+    }"""
+    
+    try:
+        raw_price_str = await page.evaluate(js_extract)
+        if raw_price_str:
+            res = clean_price(raw_price_str)
+            # 价格应该合理。由于这是旗舰家电爬虫，低于150属于配件或意外抓偏的极微弱几率。
+            if res and res[0] > 150:
+                return res
+    except: pass
+
+    # 终极兜底扫描: 纯 CSS 选择器遍历，且辅以严格过滤规则
+    selectors = [
+        "[data-test='mms-product-detail-price']",
+        "[data-test='mms-price-product-wrapper']",
+        "[data-test='mms-product-price']",
+        "div[data-test='mms-price']",
+        "[class*='ProductPrice']",
+        "span[class*='price--value']",
+        ".price",
+    ]
+    for sel in selectors:
+        try:
+            els = await page.locator(sel).all()
+            for el in els:
+                if await el.is_visible():
+                    is_crossed = await el.evaluate("el => window.getComputedStyle(el).textDecoration.includes('line-through') || !!el.closest('[class*=\"old\"], [class*=\"crossed\"], [class*=\"strike\"]')")
+                    if not is_crossed:
+                        text = await el.inner_text()
+                        parent_text = await el.evaluate("el => { let p = el.parentElement; return p ? p.innerText.toLowerCase() : ''; }")
+                        combined = text.lower() + " " + parent_text
+                        if any(x in combined for x in ["mtl", "monat", "finanz", "rate", "eff."]):
+                            continue
+                        
+                        result = clean_price(text)
+                        # 最核心的防卫网: 在家电价格监控场景中，绝对阻断极小值（典型的月供金）
+                        if result and result[0] > 150: 
+                            return result
+        except: pass
+
+    return None
+
+
+async def get_coolblue_price(page):
+    """抓取 Coolblue.de 价格"""
+    # 策略 1: 通用 Schema/Meta（JSON-LD / og:price）
+    schema_res = await get_price_from_schema(page)
+    if schema_res: return schema_res
+
+    # 策略 2: Coolblue 特有选择器
+    try: await page.wait_for_selector("[class*='sales-price'], .price, [data-test*='price']", timeout=5000)
+    except: pass
+
+    selectors = [
+        "[class*='sales-price__current']",
+        "[class*='SalesPrice']",
+        "strong[class*='price']",
+        "[data-test='sales-price']",
+        "[class*='price--current']",
+        ".price",
+        "span[class*='price']",
+    ]
+    for sel in selectors:
+        try:
+            elements = await page.locator(sel).all()
+            for el in elements:
+                if await el.is_visible():
+                    is_crossed = await el.evaluate("el => window.getComputedStyle(el).textDecoration.includes('line-through') || !!el.closest('[class*=\"old\"], [class*=\"crossed\"], [class*=\"advice\"]')")
+                    if not is_crossed:
+                        text = await el.inner_text()
+                        result = clean_price(text)
+                        if result: return result
+        except: pass
+    return None
+
+
 # ================= 导入 Filler =================
 try:
-    from filler import get_first_result_darty, get_first_result_boulanger, get_first_result_fnac, get_first_result_amazon, get_first_result_currys, update_product_link_in_csv
+    from filler import get_first_result_darty, get_first_result_boulanger, get_first_result_fnac, get_first_result_amazon, get_first_result_currys, get_first_result_mediamarkt, get_first_result_coolblue, update_product_link_in_csv
     FILLER_AVAILABLE = True
 except ImportError:
     print("[警告] 未能导入 filler.py")
@@ -577,11 +723,18 @@ async def process_product(sem, browser, item, historical_prices):
         try:
             # === 创建独立上下文 (随机指纹) ===
             ua = random.choice(USER_AGENTS)
+            # 根据 Country 设置对应的区域和时区
+            if country == 'DE':
+                locale_str, tz_str = 'de-DE', 'Europe/Berlin'
+            elif country == 'FR':
+                locale_str, tz_str = 'fr-FR', 'Europe/Paris'
+            else:
+                locale_str, tz_str = 'en-GB', 'Europe/London'
             context = await browser.new_context(
                 user_agent=ua,
                 viewport={'width': random.choice([1920, 1366, 1440, 1536]), 'height': random.choice([1080, 768, 900])},
-                locale='en-GB',
-                timezone_id='Europe/London'
+                locale=locale_str,
+                timezone_id=tz_str
             )
             # 注入完整 Stealth 脚本
             await context.add_init_script(STEALTH_JS)
@@ -613,13 +766,17 @@ async def process_product(sem, browser, item, historical_prices):
                             new_link = await get_first_result_amazon(page, target_keyword)
                         elif "currys" in platform_lower:
                             new_link = await get_first_result_currys(page, target_keyword)
+                        elif "mediamarkt" in platform_lower:
+                            new_link = await get_first_result_mediamarkt(page, target_keyword)
+                        elif "coolblue" in platform_lower:
+                            new_link = await get_first_result_coolblue(page, target_keyword)
                         
                         if new_link:
                             print(f"  [成功] 自动填充: {new_link}")
                             url = new_link
                             result['url'] = new_link
                             async with CSV_LOCK:
-                                update_product_link_in_csv(name, new_link)
+                                update_product_link_in_csv(name, platform, new_link)
                             just_filled = True
                         else:
                             print(f"  [{name}] 未搜到链接")
@@ -658,9 +815,9 @@ async def process_product(sem, browser, item, historical_prices):
                                 timeout_val = 40000 if attempt == 0 else 60000
                                 await page.goto(url, wait_until='domcontentloaded', timeout=timeout_val)
                                 
-                                # === Currys 拦截检测 ===
-                                if "currys" in url.lower():
-                                    await handle_currys_cloudflare(page, name)
+                                # === Bot 拦截检测（Currys / MediaMarkt / Coolblue）===
+                                if "currys" in url.lower() or "mediamarkt" in url.lower() or "coolblue" in url.lower() or "darty" in url.lower() or "fnac" in url.lower():
+                                    await handle_antibot_page(page, name)
                             except Exception as e:
                                 print(f"  [{name}] 导航超时/错误 ({attempt+1}): {e}")
                                 if attempt < MAX_RETRIES - 1: continue
@@ -740,6 +897,12 @@ async def process_product(sem, browser, item, historical_prices):
                         elif "currys" in platform_lower:
                             try: await page.wait_for_selector("strong[data-product='price'], .price, [data-test='current-price'], span.value", timeout=5000)
                             except: pass
+                        elif "mediamarkt" in platform_lower:
+                            try: await page.wait_for_selector("[data-test='mms-product-price'], .price, [class*='price']", timeout=8000)
+                            except: pass
+                        elif "coolblue" in platform_lower:
+                            try: await page.wait_for_selector("[class*='sales-price'], .price, [data-test*='price']", timeout=8000)
+                            except: pass
 
                         # 抓取价格
                         price_data = None
@@ -747,6 +910,8 @@ async def process_product(sem, browser, item, historical_prices):
                         elif "darty" in platform_lower: price_data = await get_darty_price(page)
                         elif "boulanger" in platform_lower: price_data = await get_boulanger_price(page)
                         elif "currys" in platform_lower: price_data = await get_currys_price(page)
+                        elif "mediamarkt" in platform_lower: price_data = await get_mediamarkt_price(page)
+                        elif "coolblue" in platform_lower: price_data = await get_coolblue_price(page)
                         elif is_amazon:
                             # 缺货检测
                             is_oos = False
