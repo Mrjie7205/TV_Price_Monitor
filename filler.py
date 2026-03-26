@@ -583,12 +583,31 @@ async def run_filler_async(headless=False):
 
         async def process_item(idx):
             async with sem:
-                context = await browser.new_context(user_agent=USER_AGENT_STR, locale="de-DE", timezone_id="Europe/Berlin", viewport={'width': 1920, 'height': 1080})
-                await context.add_init_script(STEALTH_JS)
-                page = await context.new_page()
-                
                 row = rows[idx]
                 name = row.get("Product Name") or row.get("型号")
+                country = row.get("Country") or row.get("国家", "")
+                country_upper = country.strip().upper()
+                
+                locale_str = "en-GB"
+                tz_str = "Europe/London"
+                if "FR" in country_upper:
+                    locale_str = "fr-FR"
+                    tz_str = "Europe/Paris"
+                elif "DE" in country_upper:
+                    locale_str = "de-DE"
+                    tz_str = "Europe/Berlin"
+                elif "US" in country_upper:
+                    locale_str = "en-US"
+                    tz_str = "America/New_York"
+                    
+                context = await browser.new_context(user_agent=USER_AGENT_STR, locale=locale_str, timezone_id=tz_str, viewport={'width': 1920, 'height': 1080})
+                
+                # 动态替换 STEALTH_JS 里的硬编码语言
+                lang_short = locale_str.split("-")[0]
+                dynamic_stealth = STEALTH_JS.replace("'de-DE'", f"'{locale_str}'").replace("'de'", f"'{lang_short}'")
+                await context.add_init_script(dynamic_stealth)
+                
+                page = await context.new_page()
                 brand = row.get("Brand") or ""
                 platform_val = row.get("Platform") or row.get("平台", "")
                 platform_lower = platform_val.strip().lower()
