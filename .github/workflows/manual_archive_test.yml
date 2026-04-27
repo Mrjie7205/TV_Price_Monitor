@@ -7,6 +7,10 @@ on:
         description: "DRY_RUN: only print plan, do NOT write or delete anything"
         type: boolean
         default: true
+      backfill:
+        description: "BACKFILL: archive ALL historical weeks (not just last week)"
+        type: boolean
+        default: false
 
 jobs:
   archive-test:
@@ -35,4 +39,5 @@ jobs:
           FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
           FEISHU_TABLE_ID: tbl28CxOZgpiTUd4
           DRY_RUN: ${{ inputs.dry_run }}
+          BACKFILL: ${{ inputs.backfill }}
         run: python archive_feishu.py
