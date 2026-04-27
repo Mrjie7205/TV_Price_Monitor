@@ -7,7 +7,7 @@ from collections import defaultdict, Counter
 APP_ID = os.environ.get("FEISHU_APP_ID")
 APP_SECRET = os.environ.get("FEISHU_APP_SECRET")
 APP_TOKEN = os.environ.get("FEISHU_APP_TOKEN")
-TABLE_ID = os.environ.get("FEISHU_TABLE_ID")
+TABLE_ID = os.environ.get("FEISHU_TABLE_ID", "tbl28CxOZgpiTUd4")
 
 # DRY_RUN 模式：只读 + 打印计划，不实际写入/删除任何数据
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() in ("true", "1", "yes")
