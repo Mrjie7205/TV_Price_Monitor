@@ -7,7 +7,7 @@ from collections import defaultdict, Counter
 APP_ID = os.environ.get("FEISHU_APP_ID")
 APP_SECRET = os.environ.get("FEISHU_APP_SECRET")
 APP_TOKEN = os.environ.get("FEISHU_APP_TOKEN")
-TABLE_ID = os.environ.get("FEISHU_TABLE_ID", "tbl28CxOZgpiTUd4")
+TABLE_ID = os.environ.get("FEISHU_TABLE_ID", "tblHdETxxA0aEdCJ")
 
 # DRY_RUN 模式：只读 + 打印计划，不实际写入/删除任何数据
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() in ("true", "1", "yes")
@@ -18,6 +18,16 @@ BACKFILL = os.environ.get("BACKFILL", "false").lower() in ("true", "1", "yes")
 BASE_URL = "https://open.feishu.cn/open-apis"
 
 ARCHIVED_MARKERS = ("周均", "周均-无数据")
+
+WEEKDAY_FIELDS = {
+    0: "周一价格",
+    1: "周二价格",
+    2: "周三价格",
+    3: "周四价格",
+    4: "周五价格",
+    5: "周六价格",
+    6: "周日价格",
+}
 
 
 def get_tenant_access_token():
@@ -176,6 +186,7 @@ def group_and_build_weekly_rows(records, monday_ms):
 
     for (brand, model, country, platform), items in groups.items():
         valid_prices = []
+        daily_prices = {}  # weekday(0-6) → price; 同日多条 Success 用最后一条
         for f in items:
             if f.get("状态") != "Success":
                 continue
@@ -183,9 +194,17 @@ def group_and_build_weekly_rows(records, monday_ms):
             if price_val in (None, ""):
                 continue
             try:
-                valid_prices.append(float(price_val))
+                price = float(price_val)
             except (TypeError, ValueError):
                 continue
+            valid_prices.append(price)
+            date_val = f.get("日期")
+            if date_val is not None:
+                try:
+                    weekday = datetime.fromtimestamp(int(date_val) / 1000, tz=timezone.utc).weekday()
+                    daily_prices[weekday] = price
+                except (TypeError, ValueError):
+                    pass
 
         page_title = _first_non_empty([_extract_string(f, "页面标题") for f in items])
         currency = _mode_or_first([_extract_string(f, "币种") for f in items])
@@ -204,6 +223,8 @@ def group_and_build_weekly_rows(records, monday_ms):
         if valid_prices:
             avg = round(sum(valid_prices) / len(valid_prices), 2)
             row = {**base, "状态": "周均", "价格动态": "周均", "价格": avg}
+            for wd, p in daily_prices.items():
+                row[WEEKDAY_FIELDS[wd]] = p
             has_data_count += 1
         else:
             row = {**base, "状态": "周均-无数据", "价格动态": "无数据"}
